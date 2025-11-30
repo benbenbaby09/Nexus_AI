@@ -3,10 +3,16 @@ import {
   Play, RotateCcw, Download, Cpu, Layers, FileText, 
   Upload, FileSearch, CheckSquare, AlertOctagon, 
   Wand2, ChevronRight, Gauge, FileCheck, ArrowRight,
-  Split, GitMerge, Microscope, Scale, History
+  Split, GitMerge, Microscope, Scale, History,
+  Cuboid, Eye, EyeOff, MessageSquare, Image, Video, 
+  MonitorPlay, MousePointer2, Palette, Scan, Share2, 
+  Box, Maximize, MoreHorizontal, PenTool
 } from 'lucide-react';
+import { 
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip
+} from 'recharts';
 
-type SubModule = 'REQUIREMENTS' | 'SIMULATION';
+type SubModule = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER';
 
 const RequirementsView = () => {
   const [parsingStep, setParsingStep] = useState(0); // 0: Idle, 1: Uploading, 2: Parsing, 3: Done
@@ -353,6 +359,247 @@ const SimulationView = () => {
   );
 };
 
+// --- Blender Studio View ---
+
+const BlenderStudioView = () => {
+  const [mode, setMode] = useState<'REVIEW' | 'RENDER' | 'CONCEPT'>('REVIEW');
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  const [isRendering, setIsRendering] = useState(false);
+  
+  // Mock Scene Data
+  const parts = [
+    { id: 'ASM-001', name: '涡轮总成 (Turbine ASM)', status: 'Released', visible: true },
+    { id: 'PRT-102', name: '机匣外壳 (Casing)', status: 'In Work', visible: true },
+    { id: 'PRT-105', name: '主轴 (Main Shaft)', status: 'Released', visible: true },
+    { id: 'PRT-209', name: '叶片组 (Blade Set)', status: 'In Work', visible: true },
+  ];
+
+  const comments = [
+    { id: 1, user: 'Li Wei', text: '机匣壁厚此处需增加 0.5mm 余量', date: '10 mins ago', x: 40, y: 30 },
+    { id: 2, user: 'Sarah J', text: '检查与其他组件的干涉情况', date: '2 hours ago', x: 60, y: 60 },
+  ];
+
+  const handleRender = () => {
+    setIsRendering(true);
+    setTimeout(() => setIsRendering(false), 2000);
+  };
+
+  const selectedPart = parts.find(p => p.id === selectedPartId);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-full animate-in fade-in duration-500 bg-black border border-slate-800 rounded-xl overflow-hidden">
+       
+       {/* Left Sidebar: Scene Graph */}
+       <div className="lg:col-span-2 bg-slate-900 border-r border-slate-800 flex flex-col">
+          <div className="p-3 border-b border-slate-800 flex justify-between items-center">
+             <span className="text-xs font-semibold text-slate-400 uppercase">Scene Collection</span>
+             <MoreHorizontal size={14} className="text-slate-500"/>
+          </div>
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+             {parts.map(part => (
+                <div 
+                  key={part.id} 
+                  onClick={() => setSelectedPartId(part.id)}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-xs ${
+                     selectedPartId === part.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  }`}
+                >
+                   {part.visible ? <Eye size={12} className="opacity-50"/> : <EyeOff size={12} className="opacity-50"/>}
+                   <Cuboid size={12} className={part.id.startsWith('ASM') ? 'text-blue-400' : 'text-orange-400'}/>
+                   <span className="truncate">{part.name}</span>
+                </div>
+             ))}
+          </div>
+          {/* Linked Data Preview */}
+          <div className="p-3 border-t border-slate-800 bg-slate-950">
+             <div className="text-[10px] text-slate-500 uppercase mb-2 font-semibold flex items-center gap-1"><Share2 size={10}/> Windchill Data</div>
+             {selectedPart ? (
+                <div className="space-y-1">
+                   <div className="text-xs text-white truncate">{selectedPart.name}</div>
+                   <div className="flex justify-between text-[10px] text-slate-400">
+                      <span>{selectedPart.id}</span>
+                      <span className={selectedPart.status === 'Released' ? 'text-emerald-500' : 'text-amber-500'}>{selectedPart.status}</span>
+                   </div>
+                </div>
+             ) : (
+                <div className="text-[10px] text-slate-600 italic">Select a part to view details</div>
+             )}
+          </div>
+       </div>
+
+       {/* Center: 3D Viewport */}
+       <div className="lg:col-span-7 bg-gradient-to-br from-slate-900 via-slate-950 to-black relative group">
+          
+          {/* Viewport Toolbar */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-800/80 backdrop-blur rounded-lg border border-slate-700 p-1 flex gap-1 shadow-lg z-10">
+             <button className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Select"><MousePointer2 size={16}/></button>
+             <button className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Move"><Maximize size={16}/></button>
+             <button className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Rotate"><RotateCcw size={16}/></button>
+             <div className="w-px h-4 bg-slate-600 self-center mx-1"></div>
+             <button 
+               className={`p-1.5 hover:bg-slate-700 rounded transition-colors ${mode === 'REVIEW' ? 'bg-blue-600 text-white' : 'text-slate-300'}`}
+               onClick={() => setMode('REVIEW')}
+             >
+                <MessageSquare size={16}/>
+             </button>
+             <button 
+               className={`p-1.5 hover:bg-slate-700 rounded transition-colors ${mode === 'RENDER' ? 'bg-purple-600 text-white' : 'text-slate-300'}`}
+               onClick={() => setMode('RENDER')}
+             >
+                <Image size={16}/>
+             </button>
+             <button 
+               className={`p-1.5 hover:bg-slate-700 rounded transition-colors ${mode === 'CONCEPT' ? 'bg-emerald-600 text-white' : 'text-slate-300'}`}
+               onClick={() => setMode('CONCEPT')}
+             >
+                <Palette size={16}/>
+             </button>
+          </div>
+
+          {/* 3D Scene Mock */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+             {/* Simple visual representation of engine parts */}
+             <div className="relative w-96 h-96 opacity-80 animate-[spin_20s_linear_infinite] hover:pause">
+                <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_50px_rgba(59,130,246,0.3)]">
+                   <circle cx="100" cy="100" r="80" fill="none" stroke="#334155" strokeWidth="1" strokeDasharray="4 4" />
+                   <circle cx="100" cy="100" r="60" fill="none" stroke="#475569" strokeWidth="2" />
+                   <circle cx="100" cy="100" r="20" fill="#1e293b" stroke="#94a3b8" strokeWidth="2" />
+                   {/* Blades */}
+                   {[...Array(12)].map((_, i) => (
+                      <rect 
+                        key={i} 
+                        x="95" y="20" width="10" height="60" 
+                        fill="#334155" 
+                        transform={`rotate(${i * 30} 100 100)`} 
+                        className="hover:fill-blue-500 transition-colors pointer-events-auto cursor-pointer"
+                        onClick={() => setSelectedPartId('PRT-209')}
+                      />
+                   ))}
+                </svg>
+                {/* Annotations Overlay */}
+                {mode === 'REVIEW' && comments.map(c => (
+                   <div 
+                     key={c.id}
+                     className="absolute w-6 h-6 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white shadow-lg pointer-events-auto cursor-pointer hover:scale-110 transition-transform"
+                     style={{ top: `${c.y}%`, left: `${c.x}%` }}
+                   >
+                      {c.id}
+                   </div>
+                ))}
+             </div>
+          </div>
+          
+          <div className="absolute bottom-4 right-4 text-xs font-mono text-slate-500">
+             Blender 4.0 Core | Cycles Engine Ready
+          </div>
+       </div>
+
+       {/* Right Sidebar: Context Panel */}
+       <div className="lg:col-span-3 bg-slate-900 border-l border-slate-800 p-4 flex flex-col">
+          {mode === 'REVIEW' && (
+             <>
+                <h4 className="text-xs font-semibold text-white uppercase mb-4 flex items-center gap-2">
+                   <MessageSquare size={14} className="text-blue-400"/> Design Review
+                </h4>
+                <div className="flex-1 space-y-3 overflow-y-auto">
+                   {comments.map(c => (
+                      <div key={c.id} className="bg-slate-950 p-3 rounded border border-slate-800 hover:border-slate-700">
+                         <div className="flex justify-between items-start mb-1">
+                            <div className="flex items-center gap-2">
+                               <div className="w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[9px]">{c.id}</div>
+                               <span className="text-xs font-medium text-slate-300">{c.user}</span>
+                            </div>
+                            <span className="text-[9px] text-slate-600">{c.date}</span>
+                         </div>
+                         <p className="text-xs text-slate-400 leading-relaxed">{c.text}</p>
+                      </div>
+                   ))}
+                </div>
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                   <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded flex items-center justify-center gap-2">
+                      <PenTool size={12}/> Add Marker
+                   </button>
+                </div>
+             </>
+          )}
+
+          {mode === 'RENDER' && (
+             <>
+                <h4 className="text-xs font-semibold text-white uppercase mb-4 flex items-center gap-2">
+                   <Image size={14} className="text-purple-400"/> AI Render Studio
+                </h4>
+                
+                <div className="space-y-4">
+                   <div>
+                      <label className="text-xs text-slate-500 block mb-2">Style Preset</label>
+                      <div className="grid grid-cols-2 gap-2">
+                         {['Studio', 'Outdoor', 'Blueprint', 'Clay'].map(style => (
+                            <button key={style} className="py-2 text-xs bg-slate-950 border border-slate-800 rounded text-slate-400 hover:text-white hover:border-purple-500/50 transition-colors">
+                               {style}
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+
+                   <div>
+                      <label className="text-xs text-slate-500 block mb-2">Output Format</label>
+                      <select className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-300">
+                         <option>4K Image (.png)</option>
+                         <option>Turntable (.mp4)</option>
+                         <option>Exploded View (.mp4)</option>
+                      </select>
+                   </div>
+                   
+                   <div className="h-32 bg-slate-950 rounded border border-slate-800 flex items-center justify-center relative overflow-hidden">
+                      {isRendering ? (
+                         <div className="flex flex-col items-center gap-2">
+                            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-xs text-purple-400 animate-pulse">Rendering...</span>
+                         </div>
+                      ) : (
+                         <div className="text-center opacity-40">
+                            <Image size={24} className="mx-auto mb-1"/>
+                            <span className="text-[10px]">Preview</span>
+                         </div>
+                      )}
+                   </div>
+
+                   <button 
+                     onClick={handleRender}
+                     disabled={isRendering}
+                     className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-600 text-white text-xs rounded font-medium flex items-center justify-center gap-2"
+                   >
+                      <Wand2 size={12}/> Generate Render
+                   </button>
+                </div>
+             </>
+          )}
+
+          {mode === 'CONCEPT' && (
+             <>
+                <h4 className="text-xs font-semibold text-white uppercase mb-4 flex items-center gap-2">
+                   <Palette size={14} className="text-emerald-400"/> Concept Lab
+                </h4>
+                <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg text-center mb-4">
+                   <Scan size={24} className="mx-auto text-emerald-500 mb-2"/>
+                   <p className="text-xs text-slate-300 mb-2">Generative Design Agent</p>
+                   <p className="text-[10px] text-slate-500">Describe your concept, and AI will generate a 3D mesh for sculpting.</p>
+                </div>
+                <textarea 
+                  className="w-full h-24 bg-slate-950 border border-slate-800 rounded p-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-emerald-500 mb-2"
+                  placeholder="e.g. A futuristic drone housing with organic voronoi patterns..."
+                ></textarea>
+                <button className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded">
+                   Generate Mesh
+                </button>
+             </>
+          )}
+       </div>
+
+    </div>
+  );
+};
+
 const DesignSim: React.FC = () => {
   const [activeModule, setActiveModule] = useState<SubModule>('SIMULATION');
 
@@ -393,6 +640,17 @@ const DesignSim: React.FC = () => {
             <Cpu size={14} />
             2. 智能设计与仿真
           </button>
+          <button
+            onClick={() => setActiveModule('BLENDER')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
+              activeModule === 'BLENDER' 
+                ? 'bg-slate-800 text-white shadow-sm' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Box size={14} />
+            3. Blender Studio
+          </button>
         </div>
       </div>
 
@@ -400,6 +658,7 @@ const DesignSim: React.FC = () => {
       <div className="flex-1 min-h-0 relative">
          {activeModule === 'REQUIREMENTS' && <RequirementsView />}
          {activeModule === 'SIMULATION' && <SimulationView />}
+         {activeModule === 'BLENDER' && <BlenderStudioView />}
       </div>
     </div>
   );

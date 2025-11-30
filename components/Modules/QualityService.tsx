@@ -4,14 +4,15 @@ import {
   BarChart3, RefreshCw, Zap, Database, ArrowRight, Settings, AlertTriangle,
   CheckCircle2, FileText, BrainCircuit, LineChart as LineChartIcon,
   MessageCircle, PieChart as PieChartIcon, Share2, Wrench, Microscope,
-  GitMerge, BookOpen
+  GitMerge, BookOpen, PenTool, GitCompare, Library, Bot, History,
+  FileCheck, Shield, Wand2, ChevronRight, UserCheck, Sparkles
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 
-type Tab = 'PREDICTIVE' | 'DIAGNOSIS' | 'VOC';
+type Tab = 'PREDICTIVE' | 'DIAGNOSIS' | 'VOC' | 'DOCS';
 
 // --- Predictive Quality View ---
 
@@ -271,6 +272,210 @@ const RAGDiagnosisView = () => {
   );
 };
 
+// --- QMS Document Center View ---
+
+const QMSDocumentView = () => {
+  const [subMode, setSubMode] = useState<'EDITOR' | 'REVIEW' | 'SEARCH'>('EDITOR');
+  const [selectedDoc, setSelectedDoc] = useState('QP-005');
+  
+  // Editor State
+  const [docContent, setDocContent] = useState(
+    `1. 目的\n本程序规定了不合格品控制的流程，以确保不符合要求的产品被识别和控制，防止非预期使用或交付。\n\n2. 范围\n适用于公司进料、制程及成品检验中发现的所有不合格品。\n\n3. 术语\n3.1 不合格品：未满足要求的产品。\n\n4. 职责\n4.1 质量部负责对不合格品进行判定。\n\n5. 流程\n5.1 发现问题：\n当生产线操作员发现零件尺寸偏差超过公差范围时，应立即停止生产。`
+  );
+  
+  // Review State
+  const diffContent = {
+     original: `5.1.1 抽样频率：\nIPQC 应每生产批次（Lot）抽取 5 件样品进行尺寸全检。`,
+     revised: `5.1.1 抽样频率：\nIPQC 应每班次（Shift）抽取 10 件样品进行尺寸全检，并记录 CPK 值。`
+  };
+
+  const docs = [
+    { id: 'QM-001', title: '质量手册 (Quality Manual)', type: 'Manual', status: 'Released' },
+    { id: 'QP-005', title: '不合格品控制程序', type: 'Procedure', status: 'In Revision' },
+    { id: 'WI-802', title: '最终检验作业指导书', type: 'WI', status: 'Draft' },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
+      {/* Left: Document Repo */}
+      <div className="lg:col-span-3 space-y-4">
+         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 h-full flex flex-col">
+            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+               <Library size={18} className="text-blue-400" />
+               质量体系文档库
+            </h3>
+            <div className="flex-1 space-y-2">
+               {docs.map(doc => (
+                  <div 
+                     key={doc.id}
+                     onClick={() => setSelectedDoc(doc.id)}
+                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedDoc === doc.id ? 'bg-slate-800 border border-blue-500/30' : 'hover:bg-slate-800/50 border border-transparent'
+                     }`}
+                  >
+                     <div className="flex justify-between items-start mb-1">
+                        <span className="text-xs font-mono text-slate-500">{doc.id}</span>
+                        <span className={`text-[10px] px-1.5 rounded ${
+                           doc.status === 'Released' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                        }`}>{doc.status}</span>
+                     </div>
+                     <div className="text-sm text-slate-200">{doc.title}</div>
+                     <div className="text-xs text-slate-500 mt-1">{doc.type}</div>
+                  </div>
+               ))}
+            </div>
+            <button className="w-full mt-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs flex items-center justify-center gap-2">
+               <PenTool size={12}/> 新建文档
+            </button>
+         </div>
+      </div>
+
+      {/* Center & Right: Workspace */}
+      <div className="lg:col-span-9 flex flex-col gap-4">
+         {/* Sub-Nav */}
+         <div className="flex gap-4 border-b border-slate-800 pb-2">
+            <button onClick={() => setSubMode('EDITOR')} className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${subMode === 'EDITOR' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>
+               <PenTool size={16}/> 智能编辑
+            </button>
+            <button onClick={() => setSubMode('REVIEW')} className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${subMode === 'REVIEW' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>
+               <GitCompare size={16}/> 智能评审与修订
+            </button>
+            <button onClick={() => setSubMode('SEARCH')} className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${subMode === 'SEARCH' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>
+               <Bot size={16}/> 知识问答助手
+            </button>
+         </div>
+
+         <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5 overflow-hidden flex flex-col">
+            {subMode === 'EDITOR' && (
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+                  <div className="md:col-span-2 flex flex-col">
+                     <div className="flex justify-between items-center mb-2">
+                        <div className="text-sm text-slate-400">正在编辑: <span className="text-white font-medium">{docs.find(d=>d.id===selectedDoc)?.title}</span></div>
+                        <div className="flex gap-2">
+                           <button className="px-2 py-1 text-xs bg-slate-800 text-slate-300 rounded hover:bg-slate-700">保存草稿</button>
+                           <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-500">AI 预审</button>
+                        </div>
+                     </div>
+                     <textarea 
+                        className="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-300 leading-relaxed focus:outline-none focus:border-blue-500 resize-none font-sans"
+                        value={docContent}
+                        onChange={(e) => setDocContent(e.target.value)}
+                     />
+                  </div>
+                  <div className="flex flex-col gap-4">
+                     <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
+                        <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2"><Sparkles size={12} className="text-purple-400"/> AI 写作建议</h4>
+                        <div className="space-y-3">
+                           <div className="p-2 bg-slate-900 rounded border border-slate-800 text-xs hover:border-purple-500/30 cursor-pointer">
+                              <div className="text-purple-400 mb-1 font-medium">术语检查</div>
+                              <p className="text-slate-400">检测到使用 "零件"，建议统一为公司标准术语 "组件 (Component)"。</p>
+                              <button className="mt-2 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">一键替换</button>
+                           </div>
+                           <div className="p-2 bg-slate-900 rounded border border-slate-800 text-xs hover:border-purple-500/30 cursor-pointer">
+                              <div className="text-blue-400 mb-1 font-medium">条款推荐</div>
+                              <p className="text-slate-400">根据当前"流程"章节，推荐插入引用 ISO 9001:2015 第 8.7 条款。</p>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex-1">
+                        <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2"><FileCheck size={12} className="text-emerald-400"/> 预审评分</h4>
+                        <div className="flex items-center justify-center h-24 relative">
+                           <div className="text-2xl font-bold text-white">85<span className="text-sm text-slate-500">/100</span></div>
+                           <svg className="absolute inset-0 w-full h-full -rotate-90">
+                              <circle cx="50%" cy="50%" r="30" stroke="#1e293b" strokeWidth="4" fill="none"/>
+                              <circle cx="50%" cy="50%" r="30" stroke="#10b981" strokeWidth="4" fill="none" strokeDasharray="188" strokeDashoffset="28"/>
+                           </svg>
+                        </div>
+                        <ul className="text-xs text-slate-400 space-y-1 mt-2">
+                           <li className="flex items-center gap-2"><CheckCircle2 size={10} className="text-emerald-500"/> 结构完整性</li>
+                           <li className="flex items-center gap-2"><CheckCircle2 size={10} className="text-emerald-500"/> 引用有效性</li>
+                           <li className="flex items-center gap-2"><AlertTriangle size={10} className="text-amber-500"/> 术语一致性</li>
+                        </ul>
+                     </div>
+                  </div>
+               </div>
+            )}
+
+            {subMode === 'REVIEW' && (
+               <div className="h-full flex flex-col">
+                  <div className="flex-1 grid grid-cols-2 gap-4 mb-4">
+                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 relative">
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded">Rev A (旧)</div>
+                        <pre className="text-sm text-slate-400 whitespace-pre-wrap font-sans">{diffContent.original}</pre>
+                     </div>
+                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 relative">
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-indigo-600 text-white text-xs rounded">Rev B (新)</div>
+                        <pre className="text-sm text-slate-200 whitespace-pre-wrap font-sans">
+                           {diffContent.revised.replace('每班次（Shift）', '>>>每班次（Shift）<<<')}
+                        </pre>
+                        {/* Mock Highlight */}
+                        <div className="absolute top-[40px] left-[60px] w-[100px] h-[20px] bg-emerald-500/20 pointer-events-none"></div>
+                     </div>
+                  </div>
+                  
+                  <div className="h-48 grid grid-cols-3 gap-4">
+                     <div className="col-span-2 bg-slate-950 border border-slate-800 rounded-lg p-4">
+                        <h4 className="text-xs font-semibold text-indigo-400 uppercase mb-2 flex items-center gap-2"><Wand2 size={12}/> AI 变更摘要</h4>
+                        <p className="text-sm text-slate-300 leading-relaxed">
+                           本次修订的核心意图是<strong>提高检验频次</strong>（由按批次改为按班次），并新增了对<strong>过程能力指数 (CPK)</strong> 的记录要求。这通常是为了应对近期生产稳定性波动的问题。
+                        </p>
+                     </div>
+                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
+                        <h4 className="text-xs font-semibold text-red-400 uppercase mb-2 flex items-center gap-2"><Activity size={12}/> 影响分析</h4>
+                        <div className="space-y-2">
+                           <div className="flex items-center justify-between text-xs p-1.5 bg-slate-900 rounded border border-slate-800">
+                              <span className="text-slate-300">WI-802 检验指导书</span>
+                              <span className="text-red-400">需更新</span>
+                           </div>
+                           <div className="flex items-center justify-between text-xs p-1.5 bg-slate-900 rounded border border-slate-800">
+                              <span className="text-slate-300">FM-003 检验记录表</span>
+                              <span className="text-amber-400">需确认</span>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            )}
+
+            {subMode === 'SEARCH' && (
+               <div className="h-full flex flex-col items-center justify-center max-w-2xl mx-auto w-full">
+                  <div className="text-center mb-8">
+                     <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Bot size={32} className="text-blue-400" />
+                     </div>
+                     <h2 className="text-2xl font-bold text-white mb-2">QMS 知识问答助手</h2>
+                     <p className="text-slate-400">基于全公司 2,000+ 份质量体系文件构建</p>
+                  </div>
+                  
+                  <div className="w-full relative mb-8">
+                     <input 
+                        type="text" 
+                        placeholder="例如：发现不合格品应该怎么处理？或 谁有权批准特采？"
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-5 py-4 pr-12 text-slate-200 focus:outline-none focus:border-blue-500 shadow-lg"
+                     />
+                     <button className="absolute right-3 top-3 p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors">
+                        <ArrowRight size={16} />
+                     </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 w-full">
+                     <button className="p-4 bg-slate-950 border border-slate-800 hover:border-blue-500/30 rounded-xl text-left transition-colors">
+                        <div className="flex items-center gap-2 text-blue-400 mb-1 font-medium text-sm"><Search size={14}/> 快速查询</div>
+                        <div className="text-xs text-slate-500">IQC 抽样标准是什么？</div>
+                     </button>
+                     <button className="p-4 bg-slate-950 border border-slate-800 hover:border-blue-500/30 rounded-xl text-left transition-colors">
+                        <div className="flex items-center gap-2 text-purple-400 mb-1 font-medium text-sm"><UserCheck size={14}/> 角色职责</div>
+                        <div className="text-xs text-slate-500">质量经理在变更流程中的权限？</div>
+                     </button>
+                  </div>
+               </div>
+            )}
+         </div>
+      </div>
+    </div>
+  );
+};
+
 // --- VoC Analysis View ---
 
 const VoCAnalysisView = () => {
@@ -398,6 +603,7 @@ const QualityService: React.FC = () => {
     { id: 'PREDICTIVE', label: '预测性质量 (Digital Twin)', icon: Activity },
     { id: 'DIAGNOSIS', label: '智能诊断 (RAG)', icon: Stethoscope },
     { id: 'VOC', label: '客户声音 (VoC)', icon: MessageSquare },
+    { id: 'DOCS', label: '智能文档中心 (AI-QMS)', icon: BookOpen },
   ];
 
   return (
@@ -437,6 +643,7 @@ const QualityService: React.FC = () => {
          {activeTab === 'PREDICTIVE' && <PredictiveQualityView />}
          {activeTab === 'DIAGNOSIS' && <RAGDiagnosisView />}
          {activeTab === 'VOC' && <VoCAnalysisView />}
+         {activeTab === 'DOCS' && <QMSDocumentView />}
       </div>
     </div>
   );
