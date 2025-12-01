@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppLayer } from '../types';
 import { 
   LayoutDashboard, 
@@ -9,7 +9,14 @@ import {
   ShieldCheck, 
   Users, 
   TerminalSquare,
-  Globe
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  FileCheck,
+  Stethoscope,
+  MessageSquare,
+  Activity,
+  BookOpen
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -17,17 +24,63 @@ interface NavbarProps {
   setLayer: (layer: AppLayer) => void;
 }
 
+interface NavItem {
+  id?: AppLayer;
+  label: string;
+  icon: React.ReactNode;
+  children?: NavItem[];
+  groupKey?: string; // Unique key for parent items that are not directly navigable layers
+}
+
 const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
-  const navItems = [
+  // State to track expanded groups
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['QUALITY_GROUP']));
+
+  const navItems: NavItem[] = [
     { id: AppLayer.SYSTEM_INTRO, label: '平台概览', icon: <Globe size={20} /> },
     { id: AppLayer.HOME, label: '工作台', icon: <LayoutDashboard size={20} /> },
     { id: AppLayer.DATA_FOUNDATION, label: '数据基础层', icon: <Database size={20} /> },
     { id: AppLayer.DESIGN_SIMULATION, label: '设计与仿真', icon: <PenTool size={20} /> },
     { id: AppLayer.ENGINEERING_MFG, label: '工程与制造', icon: <Wrench size={20} /> },
-    { id: AppLayer.QUALITY_SERVICE, label: '质量与服务', icon: <ShieldCheck size={20} /> },
+    { 
+      groupKey: 'QUALITY_GROUP',
+      label: '质量与服务', 
+      icon: <ShieldCheck size={20} />,
+      children: [
+        { id: AppLayer.QUALITY_DIAGNOSIS, label: '智能诊断 (RAG)', icon: <Stethoscope size={16} /> },
+        { id: AppLayer.QUALITY_VOC, label: '客户声音 (VoC)', icon: <MessageSquare size={16} /> },
+        { id: AppLayer.QUALITY_FORMAT, label: '格式合规卫士', icon: <FileCheck size={16} /> },
+        { id: AppLayer.QUALITY_PREDICTIVE, label: '预测性质量', icon: <Activity size={16} /> },
+        { id: AppLayer.QUALITY_DOCS, label: '文档中心 (QMS)', icon: <BookOpen size={16} /> },
+      ]
+    },
     { id: AppLayer.COLLABORATION, label: '协同合作', icon: <Users size={20} /> },
     { id: AppLayer.DEVOPS, label: 'DevOps 中心', icon: <TerminalSquare size={20} /> },
   ];
+
+  // Auto-expand group if current layer is inside it
+  useEffect(() => {
+    navItems.forEach(item => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => child.id === currentLayer);
+        if (hasActiveChild) {
+          setExpandedGroups(prev => new Set(prev).add(item.groupKey!));
+        }
+      }
+    });
+  }, [currentLayer]);
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen transition-all duration-300 flex-shrink-0">
@@ -40,24 +93,70 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
         </span>
       </div>
 
-      <nav className="flex-1 py-6 space-y-2 overflow-y-auto">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setLayer(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors relative
-              ${currentLayer === item.id 
-                ? 'text-blue-400 bg-slate-800/50' 
-                : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/30'
-              }`}
-          >
-            {currentLayer === item.id && (
-              <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
-            )}
-            <span className="flex-shrink-0">{item.icon}</span>
-            <span className="hidden lg:block truncate">{item.label}</span>
-          </button>
-        ))}
+      <nav className="flex-1 py-6 space-y-1 overflow-y-auto px-2">
+        {navItems.map((item, index) => {
+          if (item.children && item.groupKey) {
+            const isExpanded = expandedGroups.has(item.groupKey);
+            const isActiveParent = item.children.some(child => child.id === currentLayer);
+            
+            return (
+              <div key={item.groupKey} className="mb-1">
+                <button
+                  onClick={() => toggleGroup(item.groupKey!)}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium transition-colors rounded-lg
+                    ${isActiveParent ? 'text-blue-400 bg-slate-800/30' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/30'}
+                  `}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex-shrink-0">{item.icon}</span>
+                    <span className="hidden lg:block truncate">{item.label}</span>
+                  </div>
+                  <span className="hidden lg:block">
+                    {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  </span>
+                </button>
+                
+                {/* Sub-menu */}
+                {isExpanded && (
+                  <div className="mt-1 space-y-1 bg-slate-950/30 rounded-lg overflow-hidden hidden lg:block">
+                    {item.children.map((child) => (
+                      <button
+                        key={child.id}
+                        onClick={() => child.id && setLayer(child.id)}
+                        className={`w-full flex items-center gap-3 pl-12 pr-4 py-2.5 text-xs font-medium transition-colors relative
+                          ${currentLayer === child.id 
+                            ? 'text-white bg-blue-600/10 border-r-2 border-blue-500' 
+                            : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/30'
+                          }`}
+                      >
+                         <span className="flex-shrink-0">{child.icon}</span>
+                         <span className="truncate">{child.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => item.id && setLayer(item.id)}
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors relative rounded-lg mb-1
+                ${currentLayer === item.id 
+                  ? 'text-blue-400 bg-slate-800/50' 
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/30'
+                }`}
+            >
+              {currentLayer === item.id && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 bg-blue-500 rounded-r-full" />
+              )}
+              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="hidden lg:block truncate">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       <div className="p-4 border-t border-slate-800">

@@ -124,7 +124,7 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
             {/* Quality */}
             <div className="space-y-4">
                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Quality & Service</div>
-               <ArchitectureCard title="质量服务" icon={ShieldCheck} color="red" onClick={() => setLayer(AppLayer.QUALITY_SERVICE)}>
+               <ArchitectureCard title="质量服务" icon={ShieldCheck} color="red" onClick={() => setLayer(AppLayer.QUALITY_DIAGNOSIS)}>
                  <FeaturePoint label="预测性质量" desc="仿真 vs 实测闭环校准" />
                  <FeaturePoint label="RAG 诊断" desc="检索历史故障库解决报错" />
                  <FeaturePoint label="VoC 分析" desc="售后反馈自动分类与推送" />

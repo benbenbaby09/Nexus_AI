@@ -20,7 +20,13 @@ const LAYER_CONTEXT: Record<AppLayer, string> = {
   [AppLayer.DATA_FOUNDATION]: "用户正在数据湖与知识图谱模块。",
   [AppLayer.DESIGN_SIMULATION]: "用户正在设计与仿真 (CAD/CAE) 模块。",
   [AppLayer.ENGINEERING_MFG]: "用户正在工程、BOM 与制造模块。",
-  [AppLayer.QUALITY_SERVICE]: "用户正在质量、预测性维护与服务模块。",
+  
+  [AppLayer.QUALITY_PREDICTIVE]: "用户正在查看预测性质量概览（数字孪生）。",
+  [AppLayer.QUALITY_DIAGNOSIS]: "用户正在使用 RAG 智能诊断工具。",
+  [AppLayer.QUALITY_VOC]: "用户正在分析客户声音 (VoC) 反馈。",
+  [AppLayer.QUALITY_FORMAT]: "用户正在使用格式合规卫士检查文档。",
+  [AppLayer.QUALITY_DOCS]: "用户正在浏览质量文档中心。",
+
   [AppLayer.COLLABORATION]: "用户正在项目管理与 BI 决策模块。",
   [AppLayer.DEVOPS]: "用户正在 DevOps 与实施中心。",
 };

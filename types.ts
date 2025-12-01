@@ -11,7 +11,13 @@ export enum AppLayer {
   DATA_FOUNDATION = 'DATA_FOUNDATION',
   DESIGN_SIMULATION = 'DESIGN_SIMULATION',
   ENGINEERING_MFG = 'ENGINEERING_MFG',
-  QUALITY_SERVICE = 'QUALITY_SERVICE',
+  // Quality Sub-layers
+  QUALITY_DIAGNOSIS = 'QUALITY_DIAGNOSIS', // Intelligent Diagnosis (1st)
+  QUALITY_VOC = 'QUALITY_VOC',             // Voice of Customer
+  QUALITY_FORMAT = 'QUALITY_FORMAT',       // Compliance Guardian
+  QUALITY_PREDICTIVE = 'QUALITY_PREDICTIVE', // Digital Twin / Overview
+  QUALITY_DOCS = 'QUALITY_DOCS',           // Document Center
+  
   COLLABORATION = 'COLLABORATION',
   DEVOPS = 'DEVOPS'
 }

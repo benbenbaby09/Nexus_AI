@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Play, RotateCcw, Download, Cpu, Layers, FileText, 
@@ -103,7 +104,7 @@ const RequirementsView = () => {
               <span className="text-white font-medium">REQ-001 (高容量)</span> 与 <span className="text-white font-medium">REQ-002 (轻量化)</span> 存在权衡关系。
             </p>
             <div className="text-xs text-slate-500 bg-slate-900/50 p-2 rounded">
-              建议：检查能量密度 > 220 Wh/kg 的电芯技术方案。
+              建议：检查能量密度 &gt; 220 Wh/kg 的电芯技术方案。
             </div>
           </div>
         )}

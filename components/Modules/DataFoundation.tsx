@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Database, Server, Network, GitBranch, RefreshCcw, ShieldAlert, 
@@ -83,7 +84,7 @@ const DataLakeView = () => {
              <GitBranch className="text-purple-500" size={20}/> 数据血缘追踪
            </h3>
            <div className="h-40 bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-center text-slate-500 text-sm">
-              [交互式血缘图谱占位符: 零件 A -> 工艺卡 B -> 仿真报告 C]
+              [交互式血缘图谱占位符: 零件 A -&gt; 工艺卡 B -&gt; 仿真报告 C]
            </div>
         </div>
       </div>
@@ -306,7 +307,7 @@ const KnowledgeGraphView = () => {
              
              <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 mb-4">
                 <div className="text-xs text-slate-500 mb-1">选中对象</div>
-                <div className="font-medium text-slate-200">REQ-001: 续航 > 500km</div>
+                <div className="font-medium text-slate-200">REQ-001: 续航 &gt; 500km</div>
              </div>
 
              <div className="flex-1 overflow-y-auto">

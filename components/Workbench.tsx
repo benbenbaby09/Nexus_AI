@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UserPersona } from '../types';
 import { 
@@ -185,7 +186,7 @@ const EngineerDashboard = () => {
               <tbody className="divide-y divide-slate-800 bg-slate-900/50">
                 <tr className="hover:bg-slate-800/50">
                   <td className="px-4 py-3 font-mono">ECN-24-055</td>
-                  <td className="px-4 py-3 font-medium text-slate-200">发动机支架材料变更 (Steel -> Ti)</td>
+                  <td className="px-4 py-3 font-medium text-slate-200">发动机支架材料变更 (Steel -&gt; Ti)</td>
                   <td className="px-4 py-3"><span className="text-red-400 flex items-center gap-1"><AlertTriangle size={12}/> High</span></td>
                   <td className="px-4 py-3"><StatusBadge status="Pending" /></td>
                   <td className="px-4 py-3"><button className="text-blue-400 hover:underline">处理</button></td>

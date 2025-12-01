@@ -40,8 +40,19 @@ const App: React.FC = () => {
         return <DataFoundation />;
       case AppLayer.ENGINEERING_MFG:
         return <EngineeringMfg />;
-      case AppLayer.QUALITY_SERVICE:
-        return <QualityService />;
+      
+      // Quality Sub-modules
+      case AppLayer.QUALITY_PREDICTIVE:
+        return <QualityService viewMode="PREDICTIVE" />;
+      case AppLayer.QUALITY_DIAGNOSIS:
+        return <QualityService viewMode="DIAGNOSIS" />;
+      case AppLayer.QUALITY_VOC:
+        return <QualityService viewMode="VOC" />;
+      case AppLayer.QUALITY_FORMAT:
+        return <QualityService viewMode="FORMAT" />;
+      case AppLayer.QUALITY_DOCS:
+        return <QualityService viewMode="DOCS" />;
+
       case AppLayer.COLLABORATION:
         return <Collaboration />;
       case AppLayer.DEVOPS:

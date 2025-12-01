@@ -1,20 +1,30 @@
-import React, { useState } from 'react';
+
+import React, { useState, useRef } from 'react';
 import {
   Activity, Stethoscope, Search, MessageSquare, ThumbsUp, ThumbsDown,
   BarChart3, RefreshCw, Zap, Database, ArrowRight, Settings, AlertTriangle,
   CheckCircle2, FileText, BrainCircuit, LineChart as LineChartIcon,
   MessageCircle, PieChart as PieChartIcon, Share2, Wrench, Microscope,
   GitMerge, BookOpen, PenTool, GitCompare, Library, Bot, History,
-  FileCheck, Shield, Wand2, ChevronRight, UserCheck, Sparkles
+  FileCheck, Shield, Wand2, ChevronRight, UserCheck, Sparkles,
+  FileSpreadsheet, ShieldAlert, ScanLine, Printer, Type, Eraser, MoveVertical,
+  Upload, XCircle, FolderOpen, File, Edit3, Save, Eye,
+  Clock, TrendingUp, Users, LayoutDashboard, CheckSquare
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
+import * as XLSX from 'xlsx';
 
-type Tab = 'PREDICTIVE' | 'DIAGNOSIS' | 'VOC' | 'DOCS';
+// Define the view modes corresponding to AppLayer sub-menus
+type ViewMode = 'DIAGNOSIS' | 'VOC' | 'FORMAT' | 'PREDICTIVE' | 'DOCS';
 
-// --- Predictive Quality View ---
+interface QualityServiceProps {
+  viewMode: ViewMode;
+}
+
+// --- Predictive Quality View (Digital Twin) ---
 
 const PredictiveQualityView = () => {
   const [calibrating, setCalibrating] = useState(false);
@@ -272,206 +282,270 @@ const RAGDiagnosisView = () => {
   );
 };
 
-// --- QMS Document Center View ---
+// --- Format Compliance Checker View (Implemented using SheetJS) ---
 
-const QMSDocumentView = () => {
-  const [subMode, setSubMode] = useState<'EDITOR' | 'REVIEW' | 'SEARCH'>('EDITOR');
-  const [selectedDoc, setSelectedDoc] = useState('QP-005');
-  
-  // Editor State
-  const [docContent, setDocContent] = useState(
-    `1. 目的\n本程序规定了不合格品控制的流程，以确保不符合要求的产品被识别和控制，防止非预期使用或交付。\n\n2. 范围\n适用于公司进料、制程及成品检验中发现的所有不合格品。\n\n3. 术语\n3.1 不合格品：未满足要求的产品。\n\n4. 职责\n4.1 质量部负责对不合格品进行判定。\n\n5. 流程\n5.1 发现问题：\n当生产线操作员发现零件尺寸偏差超过公差范围时，应立即停止生产。`
-  );
-  
-  // Review State
-  const diffContent = {
-     original: `5.1.1 抽样频率：\nIPQC 应每生产批次（Lot）抽取 5 件样品进行尺寸全检。`,
-     revised: `5.1.1 抽样频率：\nIPQC 应每班次（Shift）抽取 10 件样品进行尺寸全检，并记录 CPK 值。`
+interface ExcelCell {
+  val: any;
+  address: string;
+  isError: boolean;
+  msg?: string;
+}
+
+interface ExcelData {
+  rows: ExcelCell[][];
+  headers: string[];
+}
+
+const FormatComplianceView = () => {
+  const [analyzing, setAnalyzing] = useState(false);
+  const [excelData, setExcelData] = useState<ExcelData | null>(null);
+  const [issuesCount, setIssuesCount] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAnalyzing(true);
+    setIssuesCount(0);
+
+    const reader = new FileReader();
+    
+    // Use ArrayBuffer for broader compatibility
+    reader.onload = (evt) => {
+      try {
+        const data = evt.target?.result;
+        const wb = XLSX.read(data, { type: 'array' }); // Read as array
+        const wsName = wb.SheetNames[0];
+        const ws = wb.Sheets[wsName];
+        
+        // Convert to JSON array of arrays
+        const jsonData: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        
+        if (!jsonData || jsonData.length === 0) {
+           setAnalyzing(false);
+           return;
+        }
+
+        // Process Data for Display & Checking
+        const headers = jsonData[0] as string[];
+        const processedRows: ExcelCell[][] = [];
+        let errorCount = 0;
+
+        // Skip header row in loop
+        for (let i = 1; i < jsonData.length; i++) {
+           const rowData = jsonData[i];
+           const rowCells: ExcelCell[] = [];
+           
+           // Normalize row length to match headers
+           for (let j = 0; j < headers.length; j++) {
+              const cellValue = rowData[j];
+              let isError = false;
+              let msg = '';
+
+              // --- AI / Logic Checks (Simulation for Demo) ---
+              
+              // 1. Mandatory Field Check (Simulation: 1st column 'ID' or 'Name' is required)
+              if (j === 0 && (!cellValue || String(cellValue).trim() === '')) {
+                 isError = true;
+                 msg = '必填项缺失 (Missing Required Field)';
+              }
+              
+              // 2. Enum Validation Check (Simulation: 'Status' column)
+              const headerLower = String(headers[j]).toLowerCase();
+              if (headerLower.includes('status') || headerLower.includes('状态')) {
+                 const validStatuses = ['open', 'closed', 'pending', 'released', 'in work', '已发布', '设计中', '归档'];
+                 if (cellValue && !validStatuses.includes(String(cellValue).toLowerCase())) {
+                    isError = true;
+                    msg = '非标准状态值 (Invalid Enum)';
+                 }
+              }
+
+              // 3. AI Anomaly Simulation (Randomly flag some 'Description' fields if they are too short)
+              if (!isError && headerLower.includes('desc') && cellValue && String(cellValue).length < 5) {
+                 isError = true;
+                 msg = '描述过于简略 (AI Detected)';
+              }
+
+              if (isError) errorCount++;
+
+              rowCells.push({
+                 val: cellValue,
+                 address: XLSX.utils.encode_cell({ r: i, c: j }),
+                 isError,
+                 msg
+              });
+           }
+           processedRows.push(rowCells);
+        }
+
+        // Simulate a slight delay for "AI Analysis" visualization
+        setTimeout(() => {
+           setExcelData({ headers, rows: processedRows });
+           setIssuesCount(errorCount);
+           setAnalyzing(false);
+        }, 800);
+
+      } catch (err) {
+        console.error("Error reading excel", err);
+        setAnalyzing(false);
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
   };
 
-  const docs = [
-    { id: 'QM-001', title: '质量手册 (Quality Manual)', type: 'Manual', status: 'Released' },
-    { id: 'QP-005', title: '不合格品控制程序', type: 'Procedure', status: 'In Revision' },
-    { id: 'WI-802', title: '最终检验作业指导书', type: 'WI', status: 'Draft' },
-  ];
+  const handleReset = () => {
+     setExcelData(null);
+     setIssuesCount(0);
+     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
-      {/* Left: Document Repo */}
-      <div className="lg:col-span-3 space-y-4">
-         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 h-full flex flex-col">
-            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-               <Library size={18} className="text-blue-400" />
-               质量体系文档库
-            </h3>
-            <div className="flex-1 space-y-2">
-               {docs.map(doc => (
-                  <div 
-                     key={doc.id}
-                     onClick={() => setSelectedDoc(doc.id)}
-                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedDoc === doc.id ? 'bg-slate-800 border border-blue-500/30' : 'hover:bg-slate-800/50 border border-transparent'
-                     }`}
-                  >
-                     <div className="flex justify-between items-start mb-1">
-                        <span className="text-xs font-mono text-slate-500">{doc.id}</span>
-                        <span className={`text-[10px] px-1.5 rounded ${
-                           doc.status === 'Released' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                        }`}>{doc.status}</span>
+    <div className="h-full grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-500">
+       {/* Left: Control & Summary */}
+       <div className="lg:col-span-3 flex flex-col gap-4">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+             <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                 <Shield size={18} className="text-blue-400" />
+                 格式合规卫士
+             </h3>
+             
+             {!excelData ? (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-slate-950 border border-slate-800 rounded-xl p-6 text-center border-dashed relative hover:bg-slate-900 transition-colors group cursor-pointer mb-4"
+                >
+                  <input 
+                     type="file" 
+                     ref={fileInputRef}
+                     accept=".xlsx, .xls, .csv" 
+                     className="hidden" 
+                     onChange={handleFileUpload} 
+                  />
+                  <div className="flex flex-col items-center gap-3 pointer-events-none">
+                     <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                        <FileSpreadsheet size={24} />
                      </div>
-                     <div className="text-sm text-slate-200">{doc.title}</div>
-                     <div className="text-xs text-slate-500 mt-1">{doc.type}</div>
-                  </div>
-               ))}
-            </div>
-            <button className="w-full mt-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs flex items-center justify-center gap-2">
-               <PenTool size={12}/> 新建文档
-            </button>
-         </div>
-      </div>
-
-      {/* Center & Right: Workspace */}
-      <div className="lg:col-span-9 flex flex-col gap-4">
-         {/* Sub-Nav */}
-         <div className="flex gap-4 border-b border-slate-800 pb-2">
-            <button onClick={() => setSubMode('EDITOR')} className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${subMode === 'EDITOR' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>
-               <PenTool size={16}/> 智能编辑
-            </button>
-            <button onClick={() => setSubMode('REVIEW')} className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${subMode === 'REVIEW' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>
-               <GitCompare size={16}/> 智能评审与修订
-            </button>
-            <button onClick={() => setSubMode('SEARCH')} className={`flex items-center gap-2 pb-2 text-sm font-medium transition-colors ${subMode === 'SEARCH' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-400'}`}>
-               <Bot size={16}/> 知识问答助手
-            </button>
-         </div>
-
-         <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5 overflow-hidden flex flex-col">
-            {subMode === 'EDITOR' && (
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
-                  <div className="md:col-span-2 flex flex-col">
-                     <div className="flex justify-between items-center mb-2">
-                        <div className="text-sm text-slate-400">正在编辑: <span className="text-white font-medium">{docs.find(d=>d.id===selectedDoc)?.title}</span></div>
-                        <div className="flex gap-2">
-                           <button className="px-2 py-1 text-xs bg-slate-800 text-slate-300 rounded hover:bg-slate-700">保存草稿</button>
-                           <button className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-500">AI 预审</button>
-                        </div>
-                     </div>
-                     <textarea 
-                        className="flex-1 w-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-slate-300 leading-relaxed focus:outline-none focus:border-blue-500 resize-none font-sans"
-                        value={docContent}
-                        onChange={(e) => setDocContent(e.target.value)}
-                     />
-                  </div>
-                  <div className="flex flex-col gap-4">
-                     <div className="bg-slate-950 p-4 rounded-lg border border-slate-800">
-                        <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2"><Sparkles size={12} className="text-purple-400"/> AI 写作建议</h4>
-                        <div className="space-y-3">
-                           <div className="p-2 bg-slate-900 rounded border border-slate-800 text-xs hover:border-purple-500/30 cursor-pointer">
-                              <div className="text-purple-400 mb-1 font-medium">术语检查</div>
-                              <p className="text-slate-400">检测到使用 "零件"，建议统一为公司标准术语 "组件 (Component)"。</p>
-                              <button className="mt-2 text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">一键替换</button>
-                           </div>
-                           <div className="p-2 bg-slate-900 rounded border border-slate-800 text-xs hover:border-purple-500/30 cursor-pointer">
-                              <div className="text-blue-400 mb-1 font-medium">条款推荐</div>
-                              <p className="text-slate-400">根据当前"流程"章节，推荐插入引用 ISO 9001:2015 第 8.7 条款。</p>
-                           </div>
-                        </div>
-                     </div>
-                     <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex-1">
-                        <h4 className="text-xs font-semibold text-slate-400 uppercase mb-3 flex items-center gap-2"><FileCheck size={12} className="text-emerald-400"/> 预审评分</h4>
-                        <div className="flex items-center justify-center h-24 relative">
-                           <div className="text-2xl font-bold text-white">85<span className="text-sm text-slate-500">/100</span></div>
-                           <svg className="absolute inset-0 w-full h-full -rotate-90">
-                              <circle cx="50%" cy="50%" r="30" stroke="#1e293b" strokeWidth="4" fill="none"/>
-                              <circle cx="50%" cy="50%" r="30" stroke="#10b981" strokeWidth="4" fill="none" strokeDasharray="188" strokeDashoffset="28"/>
-                           </svg>
-                        </div>
-                        <ul className="text-xs text-slate-400 space-y-1 mt-2">
-                           <li className="flex items-center gap-2"><CheckCircle2 size={10} className="text-emerald-500"/> 结构完整性</li>
-                           <li className="flex items-center gap-2"><CheckCircle2 size={10} className="text-emerald-500"/> 引用有效性</li>
-                           <li className="flex items-center gap-2"><AlertTriangle size={10} className="text-amber-500"/> 术语一致性</li>
-                        </ul>
+                     <div>
+                        <div className="text-sm font-medium text-slate-200">点击上传表格</div>
+                        <div className="text-xs text-slate-500 mt-1">支持 .xlsx, .csv (Max 10MB)</div>
                      </div>
                   </div>
                </div>
-            )}
+             ) : (
+                <div className="space-y-4">
+                   <div className="p-4 bg-slate-950 rounded-lg border border-slate-800">
+                      <div className="text-xs text-slate-500 mb-1">文件状态</div>
+                      <div className="flex items-center justify-between">
+                         <span className="text-sm text-slate-300 font-medium">Analysis Complete</span>
+                         <CheckCircle2 size={16} className="text-emerald-500"/>
+                      </div>
+                   </div>
+                   
+                   <div className={`p-4 rounded-lg border ${issuesCount > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                      <div className="text-xs text-slate-400 mb-1">发现异常点</div>
+                      <div className={`text-2xl font-bold ${issuesCount > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                         {issuesCount}
+                      </div>
+                   </div>
 
-            {subMode === 'REVIEW' && (
-               <div className="h-full flex flex-col">
-                  <div className="flex-1 grid grid-cols-2 gap-4 mb-4">
-                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 relative">
-                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-slate-800 text-slate-400 text-xs rounded">Rev A (旧)</div>
-                        <pre className="text-sm text-slate-400 whitespace-pre-wrap font-sans">{diffContent.original}</pre>
-                     </div>
-                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 relative">
-                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-indigo-600 text-white text-xs rounded">Rev B (新)</div>
-                        <pre className="text-sm text-slate-200 whitespace-pre-wrap font-sans">
-                           {diffContent.revised.replace('每班次（Shift）', '>>>每班次（Shift）<<<')}
-                        </pre>
-                        {/* Mock Highlight */}
-                        <div className="absolute top-[40px] left-[60px] w-[100px] h-[20px] bg-emerald-500/20 pointer-events-none"></div>
-                     </div>
-                  </div>
-                  
-                  <div className="h-48 grid grid-cols-3 gap-4">
-                     <div className="col-span-2 bg-slate-950 border border-slate-800 rounded-lg p-4">
-                        <h4 className="text-xs font-semibold text-indigo-400 uppercase mb-2 flex items-center gap-2"><Wand2 size={12}/> AI 变更摘要</h4>
-                        <p className="text-sm text-slate-300 leading-relaxed">
-                           本次修订的核心意图是<strong>提高检验频次</strong>（由按批次改为按班次），并新增了对<strong>过程能力指数 (CPK)</strong> 的记录要求。这通常是为了应对近期生产稳定性波动的问题。
-                        </p>
-                     </div>
-                     <div className="bg-slate-950 border border-slate-800 rounded-lg p-4">
-                        <h4 className="text-xs font-semibold text-red-400 uppercase mb-2 flex items-center gap-2"><Activity size={12}/> 影响分析</h4>
-                        <div className="space-y-2">
-                           <div className="flex items-center justify-between text-xs p-1.5 bg-slate-900 rounded border border-slate-800">
-                              <span className="text-slate-300">WI-802 检验指导书</span>
-                              <span className="text-red-400">需更新</span>
-                           </div>
-                           <div className="flex items-center justify-between text-xs p-1.5 bg-slate-900 rounded border border-slate-800">
-                              <span className="text-slate-300">FM-003 检验记录表</span>
-                              <span className="text-amber-400">需确认</span>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
+                   <button 
+                     onClick={handleReset}
+                     className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2 transition-colors"
+                   >
+                      <RefreshCw size={14}/> 上传新文件
+                   </button>
+                </div>
+             )}
+          </div>
+
+          {analyzing && (
+             <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 flex items-center gap-3 animate-pulse">
+                <RefreshCw className="animate-spin text-blue-400" size={20} />
+                <span className="text-sm text-slate-300">正在解析并扫描合规性...</span>
+             </div>
+          )}
+          
+          {/* Legend */}
+          {excelData && issuesCount > 0 && (
+             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                <div className="text-xs text-slate-500 mb-2 uppercase font-semibold">图例</div>
+                <div className="flex items-center gap-2 mb-1">
+                   <div className="w-3 h-3 bg-red-500/20 border border-red-500 rounded"></div>
+                   <span className="text-xs text-slate-400">合规性错误</span>
+                </div>
+             </div>
+          )}
+       </div>
+
+       {/* Right: Spreadsheet Viewer */}
+       <div className="lg:col-span-9 bg-slate-900/50 border border-slate-800 rounded-xl p-1 flex flex-col overflow-hidden relative group">
+          <div className="h-9 bg-slate-950 border-b border-slate-800 flex items-center justify-between px-3">
+             <span className="text-xs text-slate-500 font-mono flex items-center gap-2">
+               <FileSpreadsheet size={14} className="text-emerald-500"/> 
+               {excelData ? 'DATA PREVIEW' : 'NO FILE LOADED'}
+             </span>
+             {excelData && issuesCount > 0 && (
+               <div className="flex items-center gap-1 px-2 py-0.5 bg-red-500/10 rounded border border-red-500/20">
+                  <AlertTriangle size={12} className="text-red-400"/>
+                  <span className="text-[10px] text-red-400 font-bold">{issuesCount} Issues Found</span>
                </div>
-            )}
-
-            {subMode === 'SEARCH' && (
-               <div className="h-full flex flex-col items-center justify-center max-w-2xl mx-auto w-full">
-                  <div className="text-center mb-8">
-                     <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Bot size={32} className="text-blue-400" />
-                     </div>
-                     <h2 className="text-2xl font-bold text-white mb-2">QMS 知识问答助手</h2>
-                     <p className="text-slate-400">基于全公司 2,000+ 份质量体系文件构建</p>
-                  </div>
-                  
-                  <div className="w-full relative mb-8">
-                     <input 
-                        type="text" 
-                        placeholder="例如：发现不合格品应该怎么处理？或 谁有权批准特采？"
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-5 py-4 pr-12 text-slate-200 focus:outline-none focus:border-blue-500 shadow-lg"
-                     />
-                     <button className="absolute right-3 top-3 p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors">
-                        <ArrowRight size={16} />
-                     </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 w-full">
-                     <button className="p-4 bg-slate-950 border border-slate-800 hover:border-blue-500/30 rounded-xl text-left transition-colors">
-                        <div className="flex items-center gap-2 text-blue-400 mb-1 font-medium text-sm"><Search size={14}/> 快速查询</div>
-                        <div className="text-xs text-slate-500">IQC 抽样标准是什么？</div>
-                     </button>
-                     <button className="p-4 bg-slate-950 border border-slate-800 hover:border-blue-500/30 rounded-xl text-left transition-colors">
-                        <div className="flex items-center gap-2 text-purple-400 mb-1 font-medium text-sm"><UserCheck size={14}/> 角色职责</div>
-                        <div className="text-xs text-slate-500">质量经理在变更流程中的权限？</div>
-                     </button>
-                  </div>
-               </div>
-            )}
-         </div>
-      </div>
+             )}
+          </div>
+          
+          <div className="flex-1 bg-white relative overflow-auto">
+             {!excelData ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+                   <div className="text-center text-slate-600">
+                     <FileSpreadsheet size={48} className="mx-auto mb-2 opacity-20"/>
+                     <p>等待 Excel 文档...</p>
+                   </div>
+                </div>
+             ) : (
+                <table className="w-full text-xs border-collapse text-slate-800">
+                   <thead className="bg-slate-100 sticky top-0 z-10 shadow-sm">
+                      <tr>
+                         <th className="border border-slate-300 bg-slate-200 px-2 py-1 w-10 text-center text-slate-500">#</th>
+                         {excelData.headers.map((h, i) => (
+                            <th key={i} className="border border-slate-300 px-4 py-2 text-left font-semibold text-slate-700 min-w-[100px]">{h}</th>
+                         ))}
+                      </tr>
+                   </thead>
+                   <tbody>
+                      {excelData.rows.map((row, rIdx) => (
+                         <tr key={rIdx} className="hover:bg-blue-50">
+                            <td className="border border-slate-300 bg-slate-50 text-center text-slate-400 select-none font-mono">{rIdx + 1}</td>
+                            {row.map((cell, cIdx) => (
+                               <td 
+                                 key={cIdx} 
+                                 className={`border border-slate-300 px-2 py-1 relative group cursor-default transition-colors ${
+                                    cell.isError ? 'bg-red-100 border-red-300' : ''
+                                 }`}
+                               >
+                                  <div className="truncate max-w-[200px]">
+                                    {cell.val !== undefined && cell.val !== null ? String(cell.val) : <span className="text-slate-300 italic">null</span>}
+                                  </div>
+                                  
+                                  {/* Error Tooltip */}
+                                  {cell.isError && (
+                                     <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block z-20 w-max max-w-xs">
+                                        <div className="bg-red-600 text-white text-[10px] px-2 py-1 rounded shadow-xl flex items-center gap-1">
+                                           <AlertTriangle size={10} className="fill-white text-red-600"/>
+                                           {cell.msg}
+                                        </div>
+                                        <div className="w-2 h-2 bg-red-600 rotate-45 transform translate-x-3 -translate-y-1"></div>
+                                     </div>
+                                  )}
+                               </td>
+                            ))}
+                         </tr>
+                      ))}
+                   </tbody>
+                </table>
+             )}
+          </div>
+       </div>
     </div>
   );
 };
@@ -594,56 +668,393 @@ const VoCAnalysisView = () => {
   );
 };
 
+// --- QMS Document Center View with Intelligent Review & Workflow ---
+
+const QMSDocumentView = () => {
+   const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'ANALYTICS'>('WORKSPACE');
+   const [selectedDoc, setSelectedDoc] = useState<string | null>('DOC-001');
+   const [reviewing, setReviewing] = useState(false);
+   const [reviewResult, setReviewResult] = useState<any[] | null>(null);
+   const [docContent, setDocContent] = useState(`4.1 General Requirements\nThe organization shall establish, document, implement and maintain a quality management system and continually improve its effectiveness in accordance with the requirements of this International Standard.\n\n4.2 Documentation Requirements\n4.2.1 General\nThe quality management system documentation shall include:\na) documented statements of a quality policy and quality objectives,\nb) a quality manual,\nc) documented procedures and records required by this International Standard.`);
+
+   const documents = [
+      { id: 'ISO-9001', name: 'ISO 9001:2015 Standard', type: 'External' },
+      { id: 'DOC-001', name: 'Quality Manual v4.0', type: 'Internal' },
+      { id: 'SOP-102', name: 'Non-Conformity Control', type: 'SOP' },
+      { id: 'WI-005', name: 'Incoming Inspection', type: 'Work Instruction' },
+   ];
+
+   const workflowSteps = [
+     { id: 'SUBMIT', label: '文档提交', actor: '提交人', status: 'completed' },
+     { id: 'FORMAT', label: '格式预检', actor: '自动系统', status: 'completed' },
+     { id: 'CONTENT', label: '内容初审', actor: '初级审核员', status: 'current' },
+     { id: 'EXPERT', label: '专业审核', actor: '部门专家', status: 'pending' },
+     { id: 'APPROVE', label: '综合审批', actor: '审批领导', status: 'pending' },
+     { id: 'ARCHIVE', label: '归档发布', actor: '档案管理员', status: 'pending' },
+   ];
+
+   const efficiencyData = [
+      { name: '格式预检', hours: 0.1 },
+      { name: '内容初审', hours: 4.5 },
+      { name: '专业审核', hours: 12.0 },
+      { name: '综合审批', hours: 8.0 },
+      { name: '归档', hours: 1.0 },
+   ];
+
+   const issueTypeData = [
+      { name: '合规性错误', value: 35, color: '#ef4444' },
+      { name: '模糊表达', value: 25, color: '#f59e0b' },
+      { name: '格式问题', value: 15, color: '#3b82f6' },
+      { name: '引用失效', value: 25, color: '#8b5cf6' },
+   ];
+
+   const handleSmartReview = () => {
+      setReviewing(true);
+      setReviewResult(null);
+      // Simulate AI Review
+      setTimeout(() => {
+         setReviewResult([
+            { id: 1, type: 'ambiguity', text: 'Clause 4.1 contains vague language "continually improve".', suggestion: 'Specify metrics for improvement.' },
+            { id: 2, type: 'compliance', text: 'Missing reference to new Risk Management clause (6.1).', suggestion: 'Add section 6.1 regarding risks and opportunities.' },
+            { id: 3, type: 'grammar', text: 'Passive voice detected in 4.2.1.', suggestion: 'Rewrite for active voice.' }
+         ]);
+         setReviewing(false);
+      }, 1500);
+   };
+
+   const handleAutoModify = () => {
+      setDocContent(prev => prev + "\n\n[AI Auto-Generated Update]\n6.1 Actions to address risks and opportunities\nThe organization shall consider the issues referred to in 4.1 and the requirements referred to in 4.2 and determine the risks and opportunities that need to be addressed.");
+      setReviewResult(null); // Clear issues
+   };
+
+   return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
+         {/* Left: Navigation & Document Tree */}
+         <div className="lg:col-span-3 flex flex-col gap-4">
+             {/* Tab Switcher */}
+             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-1 flex">
+                <button 
+                  onClick={() => setActiveTab('WORKSPACE')}
+                  className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-all ${
+                     activeTab === 'WORKSPACE' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                   <FileText size={14}/> 文档工作台
+                </button>
+                <button 
+                  onClick={() => setActiveTab('ANALYTICS')}
+                  className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-all ${
+                     activeTab === 'ANALYTICS' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                   <BarChart3 size={14}/> 统计分析
+                </button>
+             </div>
+
+             <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex flex-col flex-1">
+               <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                  <Library size={18} className="text-blue-400" />
+                  QMS 文档库
+               </h3>
+               <div className="space-y-1">
+                  {documents.map(doc => (
+                     <div 
+                        key={doc.id} 
+                        onClick={() => setSelectedDoc(doc.id)}
+                        className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm ${
+                           selectedDoc === doc.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:bg-slate-800'
+                        }`}
+                     >
+                        {doc.type === 'External' ? <BookOpen size={14}/> : <FileText size={14}/>}
+                        <div className="flex-1 truncate">{doc.name}</div>
+                     </div>
+                  ))}
+               </div>
+               <div className="mt-auto pt-4 border-t border-slate-800">
+                  <button className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2">
+                     <Upload size={14}/> 上传新文档
+                  </button>
+               </div>
+            </div>
+         </div>
+
+         {/* Center & Right Content Area */}
+         <div className="lg:col-span-9 flex flex-col h-full overflow-hidden">
+            {activeTab === 'WORKSPACE' ? (
+               <div className="flex flex-col h-full gap-4">
+                  {/* Workflow Stepper */}
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex justify-between items-center overflow-x-auto">
+                     {workflowSteps.map((step, idx) => (
+                        <div key={idx} className="flex items-center">
+                           <div className="flex flex-col items-center gap-1 min-w-[80px]">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 text-xs font-bold transition-colors ${
+                                 step.status === 'completed' ? 'bg-emerald-500 border-emerald-500 text-white' :
+                                 step.status === 'current' ? 'bg-indigo-600 border-indigo-500 text-white animate-pulse' :
+                                 'bg-slate-900 border-slate-700 text-slate-500'
+                              }`}>
+                                 {step.status === 'completed' ? <CheckCircle2 size={16}/> : idx + 1}
+                              </div>
+                              <span className={`text-[10px] font-medium ${step.status === 'current' ? 'text-indigo-400' : 'text-slate-400'}`}>{step.label}</span>
+                              <span className="text-[9px] text-slate-600">{step.actor}</span>
+                           </div>
+                           {idx < workflowSteps.length - 1 && (
+                              <div className={`w-12 h-0.5 mx-2 ${
+                                 step.status === 'completed' ? 'bg-emerald-500/50' : 'bg-slate-800'
+                              }`}></div>
+                           )}
+                        </div>
+                     ))}
+                  </div>
+
+                  {/* Editor & Review Panel */}
+                  <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
+                     {/* Editor */}
+                     <div className="col-span-2 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
+                        <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4">
+                           <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
+                              <Edit3 size={14} className="text-emerald-400"/> 
+                              {documents.find(d => d.id === selectedDoc)?.name || 'Editor'}
+                           </span>
+                           <div className="flex gap-2">
+                              <button className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><Save size={12}/> 保存</button>
+                           </div>
+                        </div>
+                        <textarea 
+                           className="flex-1 bg-slate-950 p-6 text-sm text-slate-300 leading-relaxed focus:outline-none resize-none font-serif"
+                           value={docContent}
+                           onChange={(e) => setDocContent(e.target.value)}
+                        />
+                     </div>
+
+                     {/* AI Review */}
+                     <div className="col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
+                        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                           <UserCheck size={18} className="text-purple-400" />
+                           智能评审与修改
+                        </h3>
+                        
+                        <div className="flex-1 overflow-y-auto">
+                           {!reviewResult ? (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center">
+                                 {reviewing ? (
+                                    <>
+                                       <RefreshCw size={32} className="animate-spin text-purple-500 mb-2"/>
+                                       <p className="text-xs">正在分析条款合规性...</p>
+                                    </>
+                                 ) : (
+                                    <>
+                                       <Bot size={32} className="opacity-20 mb-2"/>
+                                       <p className="text-xs px-4">点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。</p>
+                                    </>
+                                 )}
+                              </div>
+                           ) : (
+                              <div className="space-y-3 animate-in slide-in-from-right-4">
+                                 {reviewResult.map((res, i) => (
+                                    <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-lg hover:border-red-500/30 transition-colors">
+                                       <div className="flex items-center gap-2 mb-1">
+                                          <AlertTriangle size={12} className="text-amber-400"/>
+                                          <span className="text-xs font-bold text-slate-300 uppercase">{res.type} Issue</span>
+                                       </div>
+                                       <p className="text-xs text-slate-400 mb-2">{res.text}</p>
+                                       <div className="bg-purple-500/10 border border-purple-500/20 p-2 rounded text-[10px] text-purple-300">
+                                          Suggestion: {res.suggestion}
+                                       </div>
+                                    </div>
+                                 ))}
+                              </div>
+                           )}
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                           <button 
+                              onClick={handleSmartReview}
+                              disabled={reviewing}
+                              className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+                           >
+                              <ScanLine size={14}/> 启动智能评审
+                           </button>
+                           {reviewResult && (
+                              <button 
+                                 onClick={handleAutoModify}
+                                 className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2 border border-slate-700"
+                              >
+                                 <Wand2 size={14}/> 一键采纳修改
+                              </button>
+                           )}
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            ) : (
+               // --- ANALYTICS DASHBOARD ---
+               <div className="grid grid-cols-2 gap-6 h-full overflow-y-auto pr-2 pb-2">
+                  {/* Efficiency Analysis */}
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                     <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                        <Clock size={18} className="text-blue-400" />
+                        审核效率分析 (平均用时/小时)
+                     </h3>
+                     <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                           <BarChart data={efficiencyData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                              <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
+                              <YAxis stroke="#64748b" fontSize={10} />
+                              <Tooltip cursor={{fill: '#1e293b'}} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#e2e8f0' }} />
+                              <Bar dataKey="hours" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]}>
+                                 {efficiencyData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.hours > 10 ? '#ef4444' : '#3b82f6'} />
+                                 ))}
+                              </Bar>
+                           </BarChart>
+                        </ResponsiveContainer>
+                     </div>
+                  </div>
+
+                  {/* Quality Issues Analysis */}
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                     <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                        <CheckSquare size={18} className="text-purple-400" />
+                        高频错误类型统计
+                     </h3>
+                     <div className="h-64 flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                           <PieChart>
+                              <Pie data={issueTypeData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                                 {issueTypeData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                 ))}
+                              </Pie>
+                              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }} />
+                              <Legend verticalAlign="bottom" height={36} iconSize={8} wrapperStyle={{ fontSize: '12px' }}/>
+                           </PieChart>
+                        </ResponsiveContainer>
+                     </div>
+                  </div>
+
+                  {/* Performance Metrics */}
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                     <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+                        <TrendingUp size={18} className="text-emerald-400" />
+                        人员绩效指标
+                     </h3>
+                     <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 bg-slate-950 rounded border border-slate-800">
+                           <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400"><Users size={16}/></div>
+                              <div>
+                                 <div className="text-sm font-medium text-slate-200">初级审核员</div>
+                                 <div className="text-xs text-slate-500">Avg. 响应时间</div>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <div className="text-sm font-bold text-emerald-400">4.5h</div>
+                              <div className="text-[10px] text-emerald-500/70">Top 10%</div>
+                           </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-slate-950 rounded border border-slate-800">
+                           <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400"><Shield size={16}/></div>
+                              <div>
+                                 <div className="text-sm font-medium text-slate-200">AI 预检系统</div>
+                                 <div className="text-xs text-slate-500">拦截准确率</div>
+                              </div>
+                           </div>
+                           <div className="text-right">
+                              <div className="text-sm font-bold text-blue-400">98.2%</div>
+                              <div className="text-[10px] text-slate-500">Stable</div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* Optimization Suggestions */}
+                  <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-5 flex flex-col relative overflow-hidden">
+                     <div className="absolute top-0 right-0 p-3 opacity-10"><Sparkles size={64}/></div>
+                     <h3 className="font-semibold text-indigo-300 mb-4 flex items-center gap-2 relative z-10">
+                        <Zap size={18} /> 流程优化建议
+                     </h3>
+                     <div className="flex-1 space-y-3 relative z-10">
+                        <div className="p-3 bg-slate-900/80 rounded border border-indigo-500/20 backdrop-blur-sm">
+                           <div className="text-xs font-bold text-indigo-400 mb-1 flex items-center gap-1">
+                              <AlertTriangle size={12}/> 瓶颈识别
+                           </div>
+                           <p className="text-xs text-slate-300 leading-relaxed">
+                              数据显示 "专业审核" 环节平均耗时 <strong>12.0小时</strong>，显著高于其他环节。主要积压在 "结构专家" 队列中。
+                           </p>
+                        </div>
+                        <div className="p-3 bg-slate-900/80 rounded border border-emerald-500/20 backdrop-blur-sm">
+                           <div className="text-xs font-bold text-emerald-400 mb-1 flex items-center gap-1">
+                              <Wand2 size={12}/> AI 改进建议
+                           </div>
+                           <p className="text-xs text-slate-300 leading-relaxed">
+                              建议引入 <strong>自动合规性预检规则 (Rule #402)</strong> 以分流 30% 的简单审核工作，或增加外部专家资源。
+                           </p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            )}
+         </div>
+      </div>
+   );
+};
+
 // --- Main Component ---
 
-const QualityService: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('PREDICTIVE');
+const QualityService: React.FC<QualityServiceProps> = ({ viewMode = 'DIAGNOSIS' }) => {
+  // --- Render Header Logic ---
+  const renderHeader = () => {
+     let title = "质量与服务";
+     let icon = <CheckCircle2 className="text-emerald-500" />;
+     let desc = "仿真与实测闭环、故障智能诊断与市场反馈分析。";
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'PREDICTIVE', label: '预测性质量 (Digital Twin)', icon: Activity },
-    { id: 'DIAGNOSIS', label: '智能诊断 (RAG)', icon: Stethoscope },
-    { id: 'VOC', label: '客户声音 (VoC)', icon: MessageSquare },
-    { id: 'DOCS', label: '智能文档中心 (AI-QMS)', icon: BookOpen },
-  ];
+     if (viewMode === 'DIAGNOSIS') {
+        title = "智能诊断 (RAG)";
+        icon = <Stethoscope className="text-indigo-400" />;
+        desc = "基于知识图谱与历史数据的智能故障排查。";
+     } else if (viewMode === 'VOC') {
+        title = "客户声音 (VoC)";
+        icon = <MessageSquare className="text-indigo-400" />;
+        desc = "全渠道客户反馈情感分析与缺陷归类。";
+     } else if (viewMode === 'FORMAT') {
+        title = "格式合规卫士";
+        icon = <FileCheck className="text-blue-400" />;
+        desc = "基于 SheetJS 的本地 Excel 合规性扫描与异常标记。";
+     } else if (viewMode === 'DOCS') {
+        title = "质量文档中心";
+        icon = <BookOpen className="text-blue-400" />;
+        desc = "QMS 体系文件管理与智能评审修改。";
+     } else if (viewMode === 'PREDICTIVE') {
+        title = "预测性质量";
+        icon = <Activity className="text-purple-400" />;
+        desc = "基于数字孪生的实时质量预测与仿真校准。";
+     }
+
+     return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 {icon} {title}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+           </div>
+        </div>
+     );
+  };
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
-      {/* Header & Nav */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <CheckCircle2 className="text-emerald-500" />
-            质量与服务
-          </h2>
-          <p className="text-slate-400 text-xs mt-1">
-            仿真与实测闭环、故障智能诊断与市场反馈分析。
-          </p>
-        </div>
-
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-slate-800 text-white shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {renderHeader()}
 
       {/* Content */}
       <div className="flex-1 min-h-0 relative">
-         {activeTab === 'PREDICTIVE' && <PredictiveQualityView />}
-         {activeTab === 'DIAGNOSIS' && <RAGDiagnosisView />}
-         {activeTab === 'VOC' && <VoCAnalysisView />}
-         {activeTab === 'DOCS' && <QMSDocumentView />}
+         {viewMode === 'PREDICTIVE' && <PredictiveQualityView />}
+         {viewMode === 'DIAGNOSIS' && <RAGDiagnosisView />}
+         {viewMode === 'VOC' && <VoCAnalysisView />}
+         {viewMode === 'FORMAT' && <FormatComplianceView />}
+         {viewMode === 'DOCS' && <QMSDocumentView />}
       </div>
     </div>
   );

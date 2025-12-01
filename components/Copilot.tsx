@@ -20,7 +20,14 @@ const CONTEXT_CONFIG: Record<AppLayer, { title: string; type: string; id: string
   [AppLayer.DESIGN_SIMULATION]: { title: '高压涡轮叶片总成', type: 'CAD Model', id: 'ASM-2024-X', risk: 'Detected High Stress' },
   [AppLayer.ENGINEERING_MFG]: { title: 'ECN-2024-055 (材料变更)', type: 'Change Notice', id: 'ECN-55' },
   [AppLayer.DATA_FOUNDATION]: { title: '钛合金 Ti-6Al-4V', type: 'Material Data', id: 'MAT-88' },
-  [AppLayer.QUALITY_SERVICE]: { title: '叶根裂纹分析报告', type: 'Quality Issue', id: 'QI-992' },
+  
+  // Quality Sub-modules
+  [AppLayer.QUALITY_PREDICTIVE]: { title: '叶根裂纹分析', type: 'Predictive Model', id: 'QI-992' },
+  [AppLayer.QUALITY_DIAGNOSIS]: { title: '故障知识库', type: 'RAG Engine', id: 'KB-CORE' },
+  [AppLayer.QUALITY_VOC]: { title: 'Q3 客户反馈报告', type: 'Report', id: 'VOC-Q3' },
+  [AppLayer.QUALITY_FORMAT]: { title: 'Excel 合规检查器', type: 'Tool', id: 'FMT-CHK' },
+  [AppLayer.QUALITY_DOCS]: { title: '质量手册 ISO9001', type: 'Document', id: 'QM-001' },
+
   [AppLayer.COLLABORATION]: { title: 'Q4 交付项目计划', type: 'Project', id: 'PRJ-2024-Q4' },
   [AppLayer.DEVOPS]: { title: 'Windchill Connector Logs', type: 'System Log', id: 'LOG-500' },
 };
@@ -31,7 +38,11 @@ const SUGGESTIONS: Record<AppLayer, string[]> = {
   [AppLayer.DESIGN_SIMULATION]: ['运行结构强度仿真', '检查几何干涉', '优化网格质量'],
   [AppLayer.ENGINEERING_MFG]: ['分析变更成本影响', '查找受影响的 BOM', '生成合规性报告'],
   [AppLayer.DATA_FOUNDATION]: ['查找相似材料', '显示引用关系'],
-  [AppLayer.QUALITY_SERVICE]: ['根本原因分析 (RCA)', '搜索类似历史故障'],
+  [AppLayer.QUALITY_PREDICTIVE]: ['根本原因分析 (RCA)', '预测下个月故障率'],
+  [AppLayer.QUALITY_DIAGNOSIS]: ['搜索类似历史故障', '如何解决 E04 报警?'],
+  [AppLayer.QUALITY_VOC]: ['总结最近的负面反馈', '客户主要抱怨什么?'],
+  [AppLayer.QUALITY_FORMAT]: ['检查 Excel 分页符', '扫描签名缺失', '修正字体格式'],
+  [AppLayer.QUALITY_DOCS]: ['搜索质量程序文件', '创建新文档模板'],
   [AppLayer.COLLABORATION]: ['更新项目进度', '发送会议纪要'],
   [AppLayer.DEVOPS]: ['解释错误日志', '生成 API 测试脚本'],
 };
