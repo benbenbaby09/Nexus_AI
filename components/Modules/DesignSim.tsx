@@ -6,13 +6,14 @@ import {
   Split, GitMerge, Microscope, Scale, History,
   Cuboid, Eye, EyeOff, MessageSquare, Image, Video, 
   MonitorPlay, MousePointer2, Palette, Scan, Share2, 
-  Box, Maximize, MoreHorizontal, PenTool
+  Box, Maximize, MoreHorizontal, PenTool, ImagePlus,
+  FileOutput, Settings2, RefreshCw, Save
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip
 } from 'recharts';
 
-type SubModule = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER';
+type SubModule = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER' | 'IMG_TO_3D';
 
 const RequirementsView = () => {
   const [parsingStep, setParsingStep] = useState(0); // 0: Idle, 1: Uploading, 2: Parsing, 3: Done
@@ -600,6 +601,176 @@ const BlenderStudioView = () => {
   );
 };
 
+// --- Image to 3D View ---
+
+const ImageTo3DView = () => {
+   const [step, setStep] = useState<'UPLOAD' | 'PROCESSING' | 'RESULT'>('UPLOAD');
+   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+   const [processingStage, setProcessingStage] = useState(0); // 0-100
+   
+   // Mock Feature Tree
+   const features = [
+      { id: 'SKETCH_01', type: 'Sketch', name: 'Base Contour' },
+      { id: 'EXTRUDE_01', type: 'Extrude', name: 'Boss Extrude', param: '25mm' },
+      { id: 'FILLET_01', type: 'Fillet', name: 'Edge Blend', param: 'R 5mm' },
+      { id: 'SHELL_01', type: 'Shell', name: 'Housing Shell', param: '2mm' },
+   ];
+
+   const handleUpload = () => {
+      // Simulate file upload
+      setUploadedImage('https://images.unsplash.com/photo-1544654067-27b5936720f7?q=80&w=600&auto=format&fit=crop'); // Placeholder sketch image
+      setStep('PROCESSING');
+      
+      // Simulate processing
+      let progress = 0;
+      const interval = setInterval(() => {
+         progress += 5;
+         setProcessingStage(progress);
+         if (progress >= 100) {
+            clearInterval(interval);
+            setStep('RESULT');
+         }
+      }, 150);
+   };
+
+   return (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
+         
+         {/* Left Column: Input & Tree */}
+         <div className="lg:col-span-3 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
+            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+               <Layers size={18} className="text-orange-400" />
+               设计输入与特征树
+            </h3>
+            
+            {step === 'UPLOAD' ? (
+               <div 
+                  onClick={handleUpload}
+                  className="flex-1 border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-center cursor-pointer hover:bg-slate-900/50 hover:border-orange-500/50 transition-colors"
+               >
+                  <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center mb-3">
+                     <ImagePlus size={24} className="text-orange-400"/>
+                  </div>
+                  <p className="text-sm text-slate-300 font-medium">点击上传草图或照片</p>
+                  <p className="text-xs text-slate-500 mt-1">支持 JPG, PNG, HEIC</p>
+               </div>
+            ) : (
+               <div className="flex-1 flex flex-col">
+                  {/* Thumbnail */}
+                  <div className="h-32 bg-slate-950 rounded-lg mb-4 border border-slate-800 overflow-hidden relative">
+                     {uploadedImage && <img src={uploadedImage} className="w-full h-full object-cover opacity-60" />}
+                     <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-center text-slate-400">Source Image</div>
+                  </div>
+
+                  {/* Feature Tree */}
+                  <div className="flex-1 bg-slate-950 rounded-lg border border-slate-800 p-2 overflow-y-auto">
+                     <div className="text-[10px] text-slate-500 uppercase font-bold mb-2 px-2">Parametric History</div>
+                     <div className="space-y-1">
+                        {features.map((feat, i) => (
+                           <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-800 cursor-pointer group">
+                              <Box size={12} className="text-blue-400"/>
+                              <div className="flex-1 min-w-0">
+                                 <div className="text-xs text-slate-300 font-medium">{feat.name}</div>
+                                 <div className="text-[10px] text-slate-500">{feat.type} • {feat.param}</div>
+                              </div>
+                              <Settings2 size={12} className="text-slate-600 group-hover:text-slate-400"/>
+                           </div>
+                        ))}
+                     </div>
+                  </div>
+               </div>
+            )}
+         </div>
+
+         {/* Center Column: Visualization */}
+         <div className="lg:col-span-6 bg-black border border-slate-800 rounded-xl relative overflow-hidden flex items-center justify-center">
+             {/* Background Grid */}
+             <div className="absolute inset-0 bg-[linear-gradient(rgba(30,41,59,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(30,41,59,0.2)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
+             
+             {step === 'PROCESSING' && (
+                <div className="flex flex-col items-center gap-4 z-10">
+                   <div className="relative w-24 h-24">
+                      <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
+                      <div className="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                      <div className="absolute inset-0 flex items-center justify-center text-orange-500 font-bold">{processingStage}%</div>
+                   </div>
+                   <div className="text-sm text-slate-300 font-medium animate-pulse">
+                      {processingStage < 30 ? '图像分割与轮廓提取...' : 
+                       processingStage < 60 ? '几何特征推断...' : 
+                       processingStage < 90 ? '构建 B-Rep 模型...' : '参数化重构...'}
+                   </div>
+                </div>
+             )}
+
+             {step === 'RESULT' && (
+                <div className="relative w-full h-full flex items-center justify-center z-10">
+                   {/* 3D Representation Placeholder */}
+                   <svg viewBox="0 0 400 300" className="w-3/4 h-3/4 drop-shadow-2xl animate-in zoom-in duration-500">
+                      <path d="M100,200 L300,200 L350,150 L150,150 Z" fill="#334155" stroke="#94a3b8" strokeWidth="2" /> {/* Base */}
+                      <path d="M100,200 L100,100 L300,100 L300,200 Z" fill="#475569" stroke="#94a3b8" strokeWidth="2" opacity="0.8" /> {/* Front */}
+                      <path d="M100,100 L150,50 L350,50 L300,100 Z" fill="#64748b" stroke="#94a3b8" strokeWidth="2" /> {/* Top */}
+                      <path d="M300,200 L350,150 L350,50 L300,100 Z" fill="#475569" stroke="#94a3b8" strokeWidth="2" opacity="0.6" /> {/* Side */}
+                      <circle cx="225" cy="125" r="20" fill="#1e293b" stroke="#94a3b8" strokeWidth="2"/> {/* Hole feature */}
+                   </svg>
+                   
+                   <div className="absolute bottom-6 flex gap-4">
+                      <button className="p-2 bg-slate-800/80 backdrop-blur rounded-full text-slate-300 hover:text-white border border-slate-600"><RotateCcw size={20}/></button>
+                      <button className="p-2 bg-slate-800/80 backdrop-blur rounded-full text-slate-300 hover:text-white border border-slate-600"><Maximize size={20}/></button>
+                   </div>
+                </div>
+             )}
+         </div>
+
+         {/* Right Column: Actions */}
+         <div className="lg:col-span-3 space-y-4">
+             {step === 'RESULT' ? (
+                <>
+                   <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                      <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
+                         <Wand2 size={16} className="text-purple-400" />
+                         语义编辑 (Semantic Edit)
+                      </h4>
+                      <div className="space-y-2">
+                         <input 
+                           type="text" 
+                           placeholder="例如: 将圆角半径增加到 10mm" 
+                           className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500"
+                         />
+                         <button className="w-full py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 border border-purple-500/30 rounded text-xs transition-colors">
+                            应用修改
+                         </button>
+                      </div>
+                   </div>
+
+                   <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
+                      <h4 className="font-semibold text-white mb-4 flex items-center gap-2">
+                         <FileOutput size={16} className="text-emerald-400" />
+                         导出与集成
+                      </h4>
+                      <div className="space-y-2">
+                         <button className="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-300 flex items-center justify-center gap-2">
+                            <Download size={14}/> 导出 STEP (.stp)
+                         </button>
+                         <button className="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded text-xs text-slate-300 flex items-center justify-center gap-2">
+                            <Download size={14}/> 导出 IGES (.igs)
+                         </button>
+                         <div className="h-px bg-slate-800 my-2"></div>
+                         <button className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs flex items-center justify-center gap-2">
+                            <Save size={14}/> 创建 Windchill 部件
+                         </button>
+                      </div>
+                   </div>
+                </>
+             ) : (
+                <div className="h-full bg-slate-900/30 border border-slate-800 rounded-xl flex items-center justify-center text-slate-600 text-xs p-8 text-center border-dashed">
+                   等待模型生成...
+                </div>
+             )}
+         </div>
+      </div>
+   );
+};
+
 const DesignSim: React.FC = () => {
   const [activeModule, setActiveModule] = useState<SubModule>('SIMULATION');
 
@@ -651,6 +822,17 @@ const DesignSim: React.FC = () => {
             <Box size={14} />
             3. Blender Studio
           </button>
+          <button
+            onClick={() => setActiveModule('IMG_TO_3D')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
+              activeModule === 'IMG_TO_3D' 
+                ? 'bg-slate-800 text-white shadow-sm' 
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <ImagePlus size={14} />
+            4. 图生 3D
+          </button>
         </div>
       </div>
 
@@ -659,6 +841,7 @@ const DesignSim: React.FC = () => {
          {activeModule === 'REQUIREMENTS' && <RequirementsView />}
          {activeModule === 'SIMULATION' && <SimulationView />}
          {activeModule === 'BLENDER' && <BlenderStudioView />}
+         {activeModule === 'IMG_TO_3D' && <ImageTo3DView />}
       </div>
     </div>
   );
