@@ -4,7 +4,9 @@ import { UserPersona, AppLayer } from "../types";
 
 // Initialize the client
 // API Key is assumed to be in process.env.API_KEY per instructions
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// We add a safety check for 'process' to avoid runtime crashes in browser environments
+const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : '';
+const ai = new GoogleGenAI({ apiKey });
 
 const SYSTEM_INSTRUCTIONS: Record<UserPersona, string> = {
   [UserPersona.DESIGNER]: "你是一位专家级的工业设计和仿真助手。你精通 CAD (NX, Catia)、CAE (Ansys, Abaqus) 和材料科学。请帮助用户优化几何形状，设置仿真边界条件，并解释应力/应变结果。请始终使用中文回答。",
