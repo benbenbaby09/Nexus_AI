@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { UserPersona, AppLayer } from "../types";
 
@@ -12,6 +13,7 @@ const SYSTEM_INSTRUCTIONS: Record<UserPersona, string> = {
 };
 
 const LAYER_CONTEXT: Record<AppLayer, string> = {
+  [AppLayer.SYSTEM_INTRO]: "用户正在查看系统的介绍和概览页面，展示了Nexus AI平台的整体架构，包括门户层、基础层、应用层等。",
   [AppLayer.HOME]: "用户正在个人工作台。",
   [AppLayer.DATA_FOUNDATION]: "用户正在数据湖与知识图谱模块。",
   [AppLayer.DESIGN_SIMULATION]: "用户正在设计与仿真 (CAD/CAE) 模块。",

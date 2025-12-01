@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import TopBar from './components/TopBar';
@@ -9,6 +10,7 @@ import EngineeringMfg from './components/Modules/EngineeringMfg';
 import QualityService from './components/Modules/QualityService';
 import Collaboration from './components/Modules/Collaboration';
 import DevOps from './components/Modules/DevOps';
+import SystemIntro from './components/Modules/SystemIntro';
 import { AppLayer, UserPersona } from './types';
 import { Database, Wrench, ShieldCheck, Users, TerminalSquare } from 'lucide-react';
 
@@ -23,11 +25,13 @@ const PlaceholderModule: React.FC<{ title: string; icon: React.ReactNode; desc: 
 );
 
 const App: React.FC = () => {
-  const [currentLayer, setLayer] = useState<AppLayer>(AppLayer.HOME);
+  const [currentLayer, setLayer] = useState<AppLayer>(AppLayer.SYSTEM_INTRO);
   const [currentPersona, setPersona] = useState<UserPersona>(UserPersona.ENGINEER);
 
   const renderContent = () => {
     switch (currentLayer) {
+      case AppLayer.SYSTEM_INTRO:
+        return <SystemIntro setLayer={setLayer} />;
       case AppLayer.HOME:
         return <Workbench persona={currentPersona} />;
       case AppLayer.DESIGN_SIMULATION:

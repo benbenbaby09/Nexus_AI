@@ -1,3 +1,4 @@
+
 export enum UserPersona {
   DESIGNER = 'DESIGNER',
   ENGINEER = 'ENGINEER',
@@ -5,6 +6,7 @@ export enum UserPersona {
 }
 
 export enum AppLayer {
+  SYSTEM_INTRO = 'SYSTEM_INTRO',
   HOME = 'HOME', // Workbench
   DATA_FOUNDATION = 'DATA_FOUNDATION',
   DESIGN_SIMULATION = 'DESIGN_SIMULATION',

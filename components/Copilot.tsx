@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { UserPersona, AppLayer, ChatMessage } from '../types';
 import { generateAIResponse } from '../services/geminiService';
@@ -14,6 +15,7 @@ interface CopilotProps {
 
 // --- Mock Context Data Configuration ---
 const CONTEXT_CONFIG: Record<AppLayer, { title: string; type: string; id: string; risk?: string }> = {
+  [AppLayer.SYSTEM_INTRO]: { title: '平台概览', type: 'System', id: 'SYS-INTRO' },
   [AppLayer.HOME]: { title: '个人工作台', type: 'Dashboard', id: 'DASH-001' },
   [AppLayer.DESIGN_SIMULATION]: { title: '高压涡轮叶片总成', type: 'CAD Model', id: 'ASM-2024-X', risk: 'Detected High Stress' },
   [AppLayer.ENGINEERING_MFG]: { title: 'ECN-2024-055 (材料变更)', type: 'Change Notice', id: 'ECN-55' },
@@ -24,6 +26,7 @@ const CONTEXT_CONFIG: Record<AppLayer, { title: string; type: string; id: string
 };
 
 const SUGGESTIONS: Record<AppLayer, string[]> = {
+  [AppLayer.SYSTEM_INTRO]: ['Nexus 平台有哪些功能？', '如何开始使用？'],
   [AppLayer.HOME]: ['总结今天的待办事项', '查看系统健康状态'],
   [AppLayer.DESIGN_SIMULATION]: ['运行结构强度仿真', '检查几何干涉', '优化网格质量'],
   [AppLayer.ENGINEERING_MFG]: ['分析变更成本影响', '查找受影响的 BOM', '生成合规性报告'],

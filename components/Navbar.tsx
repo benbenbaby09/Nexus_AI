@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AppLayer } from '../types';
 import { 
@@ -7,7 +8,8 @@ import {
   Wrench, 
   ShieldCheck, 
   Users, 
-  TerminalSquare 
+  TerminalSquare,
+  Globe
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -17,6 +19,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
   const navItems = [
+    { id: AppLayer.SYSTEM_INTRO, label: '平台概览', icon: <Globe size={20} /> },
     { id: AppLayer.HOME, label: '工作台', icon: <LayoutDashboard size={20} /> },
     { id: AppLayer.DATA_FOUNDATION, label: '数据基础层', icon: <Database size={20} /> },
     { id: AppLayer.DESIGN_SIMULATION, label: '设计与仿真', icon: <PenTool size={20} /> },
