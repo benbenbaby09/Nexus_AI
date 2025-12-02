@@ -134,7 +134,7 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
             {/* Collaboration */}
             <div className="space-y-4">
                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Collab & Decision</div>
-               <ArchitectureCard title="协同决策" icon={Users} color="orange" onClick={() => setLayer(AppLayer.COLLABORATION)}>
+               <ArchitectureCard title="协同决策" icon={Users} color="orange" onClick={() => setLayer(AppLayer.COLLABORATION_PROJECT)}>
                  <FeaturePoint label="智能协同" desc="AI 自动生成 WBS 计划" />
                  <FeaturePoint label="数字孪生" desc="企业级 BI 驾驶舱" />
                  <FeaturePoint label="自然语言 BI" desc="对话式生成报表图表" />

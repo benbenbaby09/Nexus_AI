@@ -18,7 +18,12 @@ export enum AppLayer {
   QUALITY_PREDICTIVE = 'QUALITY_PREDICTIVE', // Digital Twin / Overview
   QUALITY_DOCS = 'QUALITY_DOCS',           // Document Center
   
-  COLLABORATION = 'COLLABORATION',
+  // Collaboration Sub-layers
+  COLLABORATION_PROJECT = 'COLLABORATION_PROJECT', // Smart Project Synergy
+  COLLABORATION_BI = 'COLLABORATION_BI',           // Enterprise Digital Twin (BI)
+  COLLABORATION_SIMULATION = 'COLLABORATION_SIMULATION', // Decision Sandbox (What-If)
+  
+  COLLABORATION = 'COLLABORATION', // Deprecated main entry, kept for safe fallback
   DEVOPS = 'DEVOPS'
 }
 
