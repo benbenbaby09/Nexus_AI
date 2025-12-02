@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import * as XLSX from 'xlsx';
 import * as mammoth from 'mammoth';
+import * as docx from 'docx-preview';
 
 // Define the view modes corresponding to AppLayer sub-menus
 type ViewMode = 'DIAGNOSIS' | 'VOC' | 'FORMAT' | 'PREDICTIVE' | 'DOCS';
@@ -766,6 +767,7 @@ interface Document {
    type: string;
    content?: string; // Text content for editing/analysis
    url?: string; // Blob URL for PDF preview
+   arrayBuffer?: ArrayBuffer; // For Word docx preview
 }
 
 const QMSDocumentView = () => {
@@ -783,6 +785,7 @@ const QMSDocumentView = () => {
    const [selectedDocId, setSelectedDocId] = useState<string>('DOC-001');
    const [docContent, setDocContent] = useState<string>(''); // For Textarea
    const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null); // For PDF Iframe
+   const docxContainerRef = useRef<HTMLDivElement>(null);
    
    const [reviewing, setReviewing] = useState(false);
    const [reviewResult, setReviewResult] = useState<any[] | null>(null);
@@ -795,6 +798,21 @@ const QMSDocumentView = () => {
          if (doc.type === 'PDF' && doc.url) {
             setCurrentPdfUrl(doc.url);
             setDocContent(''); // Clear text editor for PDF
+         } else if (doc.type === 'Word' && doc.arrayBuffer) {
+            setCurrentPdfUrl(null);
+            setDocContent('');
+            if (docxContainerRef.current) {
+                docxContainerRef.current.innerHTML = ''; // Clear previous
+                // Fix: Access renderAsync safely handling both named and default exports
+                const render = (docx as any).renderAsync || (docx as any).default?.renderAsync;
+                if (render) {
+                    render(doc.arrayBuffer, docxContainerRef.current)
+                        .then(() => console.log("Docx rendered"))
+                        .catch((err: any) => console.error("Docx render error", err));
+                } else {
+                    console.error("docx-preview renderAsync function not found");
+                }
+            }
          } else {
             setCurrentPdfUrl(null);
             setDocContent(doc.content || '');
@@ -823,20 +841,22 @@ const QMSDocumentView = () => {
          const reader = new FileReader();
          reader.onload = (event) => {
             const arrayBuffer = event.target?.result as ArrayBuffer;
+            // Extract text for AI analysis context
             mammoth.extractRawText({ arrayBuffer: arrayBuffer })
                .then((result) => {
                   const newDoc: Document = {
                      id: newDocId,
                      name: file.name,
                      type: 'Word',
-                     content: result.value || "[Empty Document]"
+                     arrayBuffer: arrayBuffer, // For visual rendering
+                     content: result.value || "[Empty Document]" // For AI
                   };
                   setDocuments(prev => [...prev, newDoc]);
                   setSelectedDocId(newDocId);
                })
                .catch((err) => {
                   console.error("Mammoth error:", err);
-                  alert("Error reading Word document.");
+                  alert("Error processing Word document.");
                });
          };
          reader.readAsArrayBuffer(file);
@@ -883,13 +903,20 @@ const QMSDocumentView = () => {
             { id: 3, type: 'grammar', text: 'Passive voice detected in 4.2.1.', suggestion: 'Rewrite for active voice.' }
          ]);
          setReviewing(false);
-      }, 1500);
+      }, 2000);
    };
 
    const handleAutoModify = () => {
+      const selectedDoc = documents.find(d => d.id === selectedDocId);
+      if (selectedDoc?.type === 'Word' || selectedDoc?.type === 'PDF') {
+          alert("自动修改暂不支持 PDF 或 Word 格式。请在源文件中修改后重新上传。");
+          return;
+      }
       setDocContent(prev => prev + "\n\n[AI Auto-Generated Update]\n6.1 Actions to address risks and opportunities\nThe organization shall consider the issues referred to in 4.1 and the requirements referred to in 4.2 and determine the risks and opportunities that need to be addressed.");
       setReviewResult(null); // Clear issues
    };
+
+   const selectedDoc = documents.find(d => d.id === selectedDocId);
 
    return (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
@@ -929,7 +956,7 @@ const QMSDocumentView = () => {
                            selectedDocId === doc.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:bg-slate-800'
                         }`}
                      >
-                        {doc.type === 'External' ? <BookOpen size={14}/> : doc.type === 'PDF' ? <FileText size={14} className="text-red-400"/> : <FileText size={14}/>}
+                        {doc.type === 'External' ? <BookOpen size={14}/> : doc.type === 'PDF' ? <FileText size={14} className="text-red-400"/> : doc.type === 'Word' ? <FileText size={14} className="text-blue-400"/> : <FileText size={14}/>}
                         <div className="flex-1 truncate">{doc.name}</div>
                      </div>
                   ))}
@@ -983,31 +1010,35 @@ const QMSDocumentView = () => {
                   {/* Editor & Review Panel */}
                   <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
                      {/* Editor */}
-                     <div className="col-span-2 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-                        <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4">
+                     <div className="col-span-2 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative">
+                        <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-10 relative">
                            <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
                               <Edit3 size={14} className="text-emerald-400"/> 
-                              {documents.find(d => d.id === selectedDocId)?.name || 'Editor'}
+                              {selectedDoc?.name || 'Editor'}
                            </span>
                            <div className="flex gap-2">
                               {currentPdfUrl ? (
                                  <span className="text-xs text-slate-500">Read Only (PDF)</span>
+                              ) : selectedDoc?.type === 'Word' ? (
+                                 <span className="text-xs text-slate-500">Preview (Word)</span>
                               ) : (
                                  <button className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><Save size={12}/> 保存</button>
                               )}
                            </div>
                         </div>
                         
-                        <div className="flex-1 relative">
+                        <div className="flex-1 relative overflow-auto bg-slate-100">
                            {currentPdfUrl ? (
                               <iframe 
                                  src={currentPdfUrl} 
                                  className="w-full h-full border-none" 
                                  title="PDF Preview"
                               />
+                           ) : selectedDoc?.type === 'Word' ? (
+                              <div ref={docxContainerRef} className="bg-white text-black p-8 min-h-full shadow-lg m-4 rounded"></div>
                            ) : (
                               <textarea 
-                                 className="w-full h-full bg-slate-950 p-6 text-sm text-slate-300 leading-relaxed focus:outline-none resize-none font-serif"
+                                 className="w-full h-full bg-slate-950 text-sm text-slate-300 leading-relaxed focus:outline-none resize-none font-serif p-6"
                                  value={docContent}
                                  onChange={(e) => setDocContent(e.target.value)}
                               />
@@ -1028,13 +1059,17 @@ const QMSDocumentView = () => {
                                  {reviewing ? (
                                     <>
                                        <RefreshCw size={32} className="animate-spin text-purple-500 mb-2"/>
-                                       <p className="text-xs">正在分析条款合规性...</p>
+                                       <p className="text-xs">
+                                          {selectedDoc?.type === 'PDF' || selectedDoc?.type === 'Word' 
+                                             ? "AI 视觉引擎正在分析文档内容..." 
+                                             : "正在分析条款合规性..."}
+                                       </p>
                                     </>
                                  ) : (
                                     <>
                                        <Bot size={32} className="opacity-20 mb-2"/>
                                        <p className="text-xs px-4">
-                                          {currentPdfUrl ? "AI 评审仅支持文本模式 (请使用 Word 上传或手动编辑)" : "点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。"}
+                                          点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。支持 PDF, Word 及文本。
                                        </p>
                                     </>
                                  )}
@@ -1060,12 +1095,12 @@ const QMSDocumentView = () => {
                         <div className="mt-4 space-y-2">
                            <button 
                               onClick={handleSmartReview}
-                              disabled={reviewing || !!currentPdfUrl}
+                              disabled={reviewing}
                               className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
                            >
                               <ScanLine size={14}/> 启动智能评审
                            </button>
-                           {reviewResult && (
+                           {reviewResult && selectedDoc?.type !== 'Word' && selectedDoc?.type !== 'PDF' && (
                               <button 
                                  onClick={handleAutoModify}
                                  className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2 border border-slate-700"
