@@ -10,7 +10,11 @@ import {
   BarChart, Bar, Cell
 } from 'recharts';
 
-type Tab = 'LAKE' | 'MODELS' | 'GRAPH';
+type ViewMode = 'LAKE' | 'MODELS' | 'GRAPH';
+
+interface DataFoundationProps {
+  viewMode: ViewMode;
+}
 
 // --- Sub-Components ---
 
@@ -338,53 +342,47 @@ const KnowledgeGraphView = () => {
   );
 };
 
-// --- Main Component ---
+const DataFoundation: React.FC<DataFoundationProps> = ({ viewMode }) => {
+  // --- Render Header Logic ---
+  const renderHeader = () => {
+     let title = "数据与 AI 基础平台";
+     let icon = <Database className="text-indigo-400" />;
+     let desc = "企业级数据治理、MLOps 模型训练与全链路知识图谱。";
 
-const DataFoundation: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('LAKE');
+     if (viewMode === 'LAKE') {
+        title = "统一数据湖与治理";
+        icon = <Server className="text-blue-400" />;
+        desc = "连接异构数据源（CAD/ERP/PLM），清洗并治理数据质量。";
+     } else if (viewMode === 'MODELS') {
+        title = "AI 模型工厂";
+        icon = <Cpu className="text-purple-400" />;
+        desc = "管理私有大模型与仿真代理模型的训练流水线。";
+     } else if (viewMode === 'GRAPH') {
+        title = "PLM 知识图谱";
+        icon = <Share2 className="text-emerald-400" />;
+        desc = "构建 RFLP（需求-功能-逻辑-物理）全链路关联网络。";
+     }
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'LAKE', label: '统一数据湖与治理', icon: Database },
-    { id: 'MODELS', label: 'AI 模型工厂', icon: Cpu },
-    { id: 'GRAPH', label: 'PLM 知识图谱中枢', icon: Share2 },
-  ];
+     return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 {icon} {title}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+           </div>
+        </div>
+     );
+  };
 
   return (
-    <div className="p-6 h-full flex flex-col">
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Server className="text-indigo-400" />
-            数据与 AI 基础平台
-          </h2>
-          <p className="text-slate-400 text-sm mt-1">
-            企业级数据治理、MLOps 模型训练与全链路知识图谱。
-          </p>
-        </div>
-        
-        {/* Tabs */}
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-slate-800 text-white shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <tab.icon size={16} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="p-6 h-full flex flex-col gap-6">
+      {renderHeader()}
 
-      <div className="flex-1 min-h-0">
-        {activeTab === 'LAKE' && <DataLakeView />}
-        {activeTab === 'MODELS' && <ModelFactoryView />}
-        {activeTab === 'GRAPH' && <KnowledgeGraphView />}
+      <div className="flex-1 min-h-0 relative">
+        {viewMode === 'LAKE' && <DataLakeView />}
+        {viewMode === 'MODELS' && <ModelFactoryView />}
+        {viewMode === 'GRAPH' && <KnowledgeGraphView />}
       </div>
     </div>
   );

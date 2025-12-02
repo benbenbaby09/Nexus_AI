@@ -18,7 +18,18 @@ import {
   Activity,
   BookOpen,
   GitMerge,
-  Shuffle
+  Shuffle,
+  Split,
+  Cpu,
+  Box,
+  ImagePlus,
+  ListTree,
+  Factory,
+  GitPullRequest,
+  Server,
+  Share2,
+  Code2,
+  TestTube
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -35,15 +46,44 @@ interface NavItem {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
-  // State to track expanded groups
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['QUALITY_GROUP', 'COLLAB_GROUP']));
+  // State to track expanded groups - expand Data and Design by default as well
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['DESIGN_GROUP', 'QUALITY_GROUP']));
 
   const navItems: NavItem[] = [
     { id: AppLayer.SYSTEM_INTRO, label: '平台概览', icon: <Globe size={20} /> },
     { id: AppLayer.HOME, label: '工作台', icon: <LayoutDashboard size={20} /> },
-    { id: AppLayer.DATA_FOUNDATION, label: '数据基础层', icon: <Database size={20} /> },
-    { id: AppLayer.DESIGN_SIMULATION, label: '设计与仿真', icon: <PenTool size={20} /> },
-    { id: AppLayer.ENGINEERING_MFG, label: '工程与制造', icon: <Wrench size={20} /> },
+    
+    { 
+      groupKey: 'DATA_GROUP',
+      label: '数据基础层', 
+      icon: <Database size={20} />,
+      children: [
+        { id: AppLayer.DATA_LAKE, label: '数据湖与治理', icon: <Server size={16} /> },
+        { id: AppLayer.DATA_MODELS, label: 'AI 模型工厂', icon: <Cpu size={16} /> },
+        { id: AppLayer.DATA_GRAPH, label: 'PLM 知识图谱', icon: <Share2 size={16} /> },
+      ]
+    },
+    { 
+      groupKey: 'DESIGN_GROUP',
+      label: '设计与仿真', 
+      icon: <PenTool size={20} />,
+      children: [
+        { id: AppLayer.DESIGN_REQUIREMENTS, label: '智能需求工程', icon: <Split size={16} /> },
+        { id: AppLayer.DESIGN_SIMULATION_CORE, label: '设计与仿真', icon: <Activity size={16} /> },
+        { id: AppLayer.DESIGN_BLENDER, label: 'Blender Studio', icon: <Box size={16} /> },
+        { id: AppLayer.DESIGN_IMG23D, label: '图生 3D', icon: <ImagePlus size={16} /> },
+      ]
+    },
+    { 
+      groupKey: 'ENG_GROUP',
+      label: '工程与制造', 
+      icon: <Wrench size={20} />,
+      children: [
+        { id: AppLayer.ENGINEERING_BOM, label: '智能 BOM 管理', icon: <ListTree size={16} /> },
+        { id: AppLayer.ENGINEERING_PROCESS, label: '智能工艺规划', icon: <Factory size={16} /> },
+        { id: AppLayer.ENGINEERING_CHANGE, label: '变更管理 (ECN)', icon: <GitPullRequest size={16} /> },
+      ]
+    },
     { 
       groupKey: 'QUALITY_GROUP',
       label: '质量与服务', 
@@ -66,7 +106,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
         { id: AppLayer.COLLABORATION_SIMULATION, label: '决策沙盘 (What-If)', icon: <Shuffle size={16} /> },
       ]
     },
-    { id: AppLayer.DEVOPS, label: 'DevOps 中心', icon: <TerminalSquare size={20} /> },
+    { 
+      groupKey: 'DEVOPS_GROUP',
+      label: 'DevOps 中心', 
+      icon: <TerminalSquare size={20} />,
+      children: [
+        { id: AppLayer.DEVOPS_CODEGEN, label: '代码生成器', icon: <Code2 size={16} /> },
+        { id: AppLayer.DEVOPS_TESTING, label: '自动化测试', icon: <TestTube size={16} /> },
+        { id: AppLayer.DEVOPS_MIGRATION, label: '数据迁移助手', icon: <Database size={16} /> },
+      ]
+    },
   ];
 
   // Auto-expand group if current layer is inside it
@@ -97,7 +146,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
     <div className="w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen transition-all duration-300 flex-shrink-0">
       <div className="p-4 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-800 h-16">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
-          PLM
+          N
         </div>
         <span className="hidden lg:block font-bold text-lg tracking-tight text-white">
           Nexus AI

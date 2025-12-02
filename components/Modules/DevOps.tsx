@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Terminal, Code2, Play, CheckCircle2, AlertTriangle, 
@@ -10,7 +11,11 @@ import {
   PieChart, Pie, Cell
 } from 'recharts';
 
-type Tab = 'CODEGEN' | 'TESTING' | 'MIGRATION';
+type ViewMode = 'CODEGEN' | 'TESTING' | 'MIGRATION';
+
+interface DevOpsProps {
+  viewMode: ViewMode;
+}
 
 // --- Windchill Code Generator View ---
 
@@ -144,7 +149,7 @@ public class BOMTraversalService {
 
       {/* Right: Code Editor */}
       <div className="lg:col-span-8 bg-black border border-slate-800 rounded-xl overflow-hidden flex flex-col">
-         <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4">
+         <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-center px-4">
             <div className="flex items-center gap-2">
                <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
@@ -153,7 +158,7 @@ public class BOMTraversalService {
                </div>
                <span className="text-xs text-slate-500 ml-2 font-mono">BOMTraversalService.java</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 ml-auto">
                <span className="text-[10px] text-slate-500">Java / Windchill</span>
                <button className="p-1 hover:bg-slate-800 rounded text-slate-400"><Code2 size={14}/></button>
             </div>
@@ -402,52 +407,48 @@ const DataMigrationView = () => {
 
 // --- Main Component ---
 
-const DevOps: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('CODEGEN');
+const DevOps: React.FC<DevOpsProps> = ({ viewMode }) => {
+  // --- Render Header Logic ---
+  const renderHeader = () => {
+     let title = "实施与运维效能中心";
+     let icon = <Server className="text-pink-500" />;
+     let desc = "用 AI 加速 Windchill 开发、测试与数据迁移。";
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'CODEGEN', label: 'Windchill 代码生成器', icon: Code2 },
-    { id: 'TESTING', label: '自动化测试生成', icon: TestTube },
-    { id: 'MIGRATION', label: '数据迁移助手', icon: Database },
-  ];
+     if (viewMode === 'CODEGEN') {
+        title = "Windchill 代码生成器";
+        icon = <Code2 className="text-blue-400" />;
+        desc = "自动生成 Service, Action, Loader 等 Windchill 组件代码。";
+     } else if (viewMode === 'TESTING') {
+        title = "自动化测试生成";
+        icon = <TestTube className="text-purple-400" />;
+        desc = "基于用户故事自动生成 Unit, API 及 UI 测试用例。";
+     } else if (viewMode === 'MIGRATION') {
+        title = "数据迁移助手";
+        icon = <Database className="text-orange-400" />;
+        desc = "智能映射旧系统数据模型至 Windchill 对象。";
+     }
+
+     return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 {icon} {title}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+           </div>
+        </div>
+     );
+  };
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
-      {/* Header & Nav */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Server className="text-pink-500" />
-            实施与运维效能中心
-          </h2>
-          <p className="text-slate-400 text-xs mt-1">
-            用 AI 加速 Windchill 开发、测试与数据迁移。
-          </p>
-        </div>
-
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-slate-800 text-white shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {renderHeader()}
 
       {/* Content */}
       <div className="flex-1 min-h-0 relative">
-         {activeTab === 'CODEGEN' && <CodeGeneratorView />}
-         {activeTab === 'TESTING' && <AutomatedTestingView />}
-         {activeTab === 'MIGRATION' && <DataMigrationView />}
+         {viewMode === 'CODEGEN' && <CodeGeneratorView />}
+         {viewMode === 'TESTING' && <AutomatedTestingView />}
+         {viewMode === 'MIGRATION' && <DataMigrationView />}
       </div>
     </div>
   );

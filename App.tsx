@@ -12,17 +12,6 @@ import Collaboration from './components/Modules/Collaboration';
 import DevOps from './components/Modules/DevOps';
 import SystemIntro from './components/Modules/SystemIntro';
 import { AppLayer, UserPersona } from './types';
-import { Database, Wrench, ShieldCheck, Users, TerminalSquare } from 'lucide-react';
-
-const PlaceholderModule: React.FC<{ title: string; icon: React.ReactNode; desc: string }> = ({ title, icon, desc }) => (
-  <div className="flex flex-col items-center justify-center h-full text-center p-12 opacity-50">
-    <div className="p-6 bg-slate-800 rounded-full mb-6 text-slate-400">
-      {icon}
-    </div>
-    <h2 className="text-2xl font-bold text-slate-200 mb-2">{title}</h2>
-    <p className="text-slate-400 max-w-md">{desc}</p>
-  </div>
-);
 
 const App: React.FC = () => {
   const [currentLayer, setLayer] = useState<AppLayer>(AppLayer.SYSTEM_INTRO);
@@ -34,12 +23,38 @@ const App: React.FC = () => {
         return <SystemIntro setLayer={setLayer} />;
       case AppLayer.HOME:
         return <Workbench persona={currentPersona} />;
-      case AppLayer.DESIGN_SIMULATION:
-        return <DesignSim />;
-      case AppLayer.DATA_FOUNDATION:
-        return <DataFoundation />;
-      case AppLayer.ENGINEERING_MFG:
-        return <EngineeringMfg />;
+      
+      // Data Foundation Sub-modules
+      case AppLayer.DATA_LAKE:
+        return <DataFoundation viewMode="LAKE" />;
+      case AppLayer.DATA_MODELS:
+        return <DataFoundation viewMode="MODELS" />;
+      case AppLayer.DATA_GRAPH:
+        return <DataFoundation viewMode="GRAPH" />;
+      case AppLayer.DATA_FOUNDATION: // Fallback
+        return <DataFoundation viewMode="LAKE" />;
+
+      // Design & Simulation Sub-modules
+      case AppLayer.DESIGN_REQUIREMENTS:
+        return <DesignSim viewMode="REQUIREMENTS" />;
+      case AppLayer.DESIGN_SIMULATION_CORE:
+        return <DesignSim viewMode="SIMULATION" />;
+      case AppLayer.DESIGN_BLENDER:
+        return <DesignSim viewMode="BLENDER" />;
+      case AppLayer.DESIGN_IMG23D:
+        return <DesignSim viewMode="IMG_TO_3D" />;
+      case AppLayer.DESIGN_SIMULATION: // Fallback
+        return <DesignSim viewMode="SIMULATION" />;
+
+      // Engineering & Mfg Sub-modules
+      case AppLayer.ENGINEERING_BOM:
+        return <EngineeringMfg viewMode="BOM" />;
+      case AppLayer.ENGINEERING_PROCESS:
+        return <EngineeringMfg viewMode="PROCESS" />;
+      case AppLayer.ENGINEERING_CHANGE:
+        return <EngineeringMfg viewMode="CHANGE" />;
+      case AppLayer.ENGINEERING_MFG: // Fallback
+        return <EngineeringMfg viewMode="BOM" />;
       
       // Quality Sub-modules
       case AppLayer.QUALITY_PREDICTIVE:
@@ -63,10 +78,16 @@ const App: React.FC = () => {
       case AppLayer.COLLABORATION: // Fallback
         return <Collaboration viewMode="PROJECT" />;
 
-      case AppLayer.COLLABORATION:
-        return <Collaboration viewMode="PROJECT" />;
-      case AppLayer.DEVOPS:
-        return <DevOps />;
+      // DevOps Sub-modules
+      case AppLayer.DEVOPS_CODEGEN:
+        return <DevOps viewMode="CODEGEN" />;
+      case AppLayer.DEVOPS_TESTING:
+        return <DevOps viewMode="TESTING" />;
+      case AppLayer.DEVOPS_MIGRATION:
+        return <DevOps viewMode="MIGRATION" />;
+      case AppLayer.DEVOPS: // Fallback
+        return <DevOps viewMode="CODEGEN" />;
+
       default:
         return <div className="p-6">未找到模块</div>;
     }

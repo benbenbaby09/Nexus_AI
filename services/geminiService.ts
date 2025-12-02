@@ -4,7 +4,6 @@ import { UserPersona, AppLayer } from "../types";
 
 // Initialize the client
 // API Key is assumed to be in process.env.API_KEY per instructions
-// We add a safety check for 'process' to avoid runtime crashes in browser environments
 const apiKey = (typeof process !== 'undefined' && process.env && process.env.API_KEY) ? process.env.API_KEY : '';
 const ai = new GoogleGenAI({ apiKey });
 
@@ -15,23 +14,45 @@ const SYSTEM_INSTRUCTIONS: Record<UserPersona, string> = {
 };
 
 const LAYER_CONTEXT: Record<AppLayer, string> = {
-  [AppLayer.SYSTEM_INTRO]: "用户正在查看系统的介绍和概览页面，展示了Nexus AI平台的整体架构，包括门户层、基础层、应用层等。",
+  [AppLayer.SYSTEM_INTRO]: "用户正在查看系统的介绍和概览页面，展示了Nexus AI平台的整体架构。",
   [AppLayer.HOME]: "用户正在个人工作台。",
-  [AppLayer.DATA_FOUNDATION]: "用户正在数据湖与知识图谱模块。",
-  [AppLayer.DESIGN_SIMULATION]: "用户正在设计与仿真 (CAD/CAE) 模块。",
-  [AppLayer.ENGINEERING_MFG]: "用户正在工程、BOM 与制造模块。",
   
+  // Data Foundation
+  [AppLayer.DATA_LAKE]: "用户正在数据湖与治理模块，查看异构数据源连接状态和 ETL 管道。",
+  [AppLayer.DATA_MODELS]: "用户正在 AI 模型工厂，管理私有模型训练任务。",
+  [AppLayer.DATA_GRAPH]: "用户正在 PLM 知识图谱模块，进行 RFLP 关联分析。",
+  [AppLayer.DATA_FOUNDATION]: "用户正在数据基础层。",
+
+  // Design
+  [AppLayer.DESIGN_REQUIREMENTS]: "用户正在智能需求工程模块，解析标书和需求文档。",
+  [AppLayer.DESIGN_SIMULATION_CORE]: "用户正在设计与仿真模块，使用代理模型进行快速分析。",
+  [AppLayer.DESIGN_BLENDER]: "用户正在 Blender Studio，进行 3D 渲染和评审。",
+  [AppLayer.DESIGN_IMG23D]: "用户正在图生 3D 模块，从草图生成三维模型。",
+  [AppLayer.DESIGN_SIMULATION]: "用户正在设计与仿真中心。",
+
+  // Engineering
+  [AppLayer.ENGINEERING_BOM]: "用户正在智能 BOM 管理模块，查看 EBOM 结构和进行完整性审计。",
+  [AppLayer.ENGINEERING_PROCESS]: "用户正在智能工艺规划模块，生成加工特征和路线。",
+  [AppLayer.ENGINEERING_CHANGE]: "用户正在变更管理模块，分析 ECN 影响范围。",
+  [AppLayer.ENGINEERING_MFG]: "用户正在工程与制造中心。",
+  
+  // Quality
   [AppLayer.QUALITY_PREDICTIVE]: "用户正在查看预测性质量概览（数字孪生）。",
   [AppLayer.QUALITY_DIAGNOSIS]: "用户正在使用 RAG 智能诊断工具。",
   [AppLayer.QUALITY_VOC]: "用户正在分析客户声音 (VoC) 反馈。",
   [AppLayer.QUALITY_FORMAT]: "用户正在使用格式合规卫士检查文档。",
   [AppLayer.QUALITY_DOCS]: "用户正在浏览质量文档中心。",
 
+  // Collaboration
   [AppLayer.COLLABORATION_PROJECT]: "用户正在智能项目协同模块，查看甘特图和任务 WBS。",
   [AppLayer.COLLABORATION_BI]: "用户正在企业数字孪生 BI 模块，使用自然语言查询运营指标。",
   [AppLayer.COLLABORATION_SIMULATION]: "用户正在决策沙盘 (What-If) 模块，推演供应链风险。",
-  
   [AppLayer.COLLABORATION]: "用户正在协同与决策模块。",
+
+  // DevOps
+  [AppLayer.DEVOPS_CODEGEN]: "用户正在代码生成器模块，生成 Windchill 二次开发代码。",
+  [AppLayer.DEVOPS_TESTING]: "用户正在自动化测试模块，生成测试用例。",
+  [AppLayer.DEVOPS_MIGRATION]: "用户正在数据迁移助手模块，进行数据映射。",
   [AppLayer.DEVOPS]: "用户正在 DevOps 与实施中心。",
 };
 
@@ -68,40 +89,14 @@ export const generateAIResponse = async (
   }
 };
 
-export const analyzeBOMImpact = async (bomData: string): Promise<string> => {
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `分析此 BOM 结构的潜在供应链风险，并在适用的情况下建议替代材料。请使用中文回答: ${bomData}`,
-      config: {
-        temperature: 0.2, // Lower temperature for analytical tasks
-      }
-    });
-    return response.text || "分析失败。";
-  } catch (error) {
-    return "分析 BOM 数据时出错。";
-  }
-};
-
-/**
- * Reviews QMS documents (PDF or Text) for compliance and quality issues.
- * Returns structured JSON data.
- */
 export const reviewQMSDocument = async (
-  docContent: string, // Text content or Base64 string (for PDF)
+  docContent: string,
   mimeType: 'text/plain' | 'application/pdf'
 ): Promise<any[]> => {
   try {
     const parts: any[] = [];
-    
-    // Construct the prompt based on input type
     if (mimeType === 'application/pdf') {
-      parts.push({
-        inlineData: {
-          mimeType: mimeType,
-          data: docContent
-        }
-      });
+      parts.push({ inlineData: { mimeType: mimeType, data: docContent } });
       parts.push({ text: "作为 ISO 9001 质量体系审核专家，请审核此 PDF 文档。找出不符合标准、表述模糊（如'足够'、'适当'等词）或语法错误的地方。请以 JSON 格式返回列表。" });
     } else {
       parts.push({ text: `作为 ISO 9001 质量体系审核专家，请审核以下文档内容。找出不符合标准、表述模糊或语法错误的地方:\n\n${docContent}` });
@@ -120,16 +115,10 @@ export const reviewQMSDocument = async (
               type: { 
                 type: Type.STRING, 
                 enum: ['compliance', 'ambiguity', 'grammar', 'formatting'],
-                description: "Issue category: compliance (合规性), ambiguity (模糊), grammar (语法), formatting (格式)"
+                description: "Issue category"
               },
-              text: { 
-                type: Type.STRING, 
-                description: "The original text snippet containing the issue (quote directly)" 
-              },
-              suggestion: { 
-                type: Type.STRING, 
-                description: "Specific advice on how to fix it (in Chinese)" 
-              }
+              text: { type: Type.STRING },
+              suggestion: { type: Type.STRING }
             },
             required: ['type', 'text', 'suggestion']
           }
@@ -143,9 +132,41 @@ export const reviewQMSDocument = async (
     return [];
   } catch (error) {
     console.error("AI Review Error:", error);
-    // Fallback for demo if API fails
-    return [
-       { type: 'error', text: 'AI 服务暂时不可用', suggestion: '请检查网络连接或 API Key 配额。' }
-    ];
+    return [{ type: 'error', text: 'AI 服务暂时不可用', suggestion: '请检查网络连接或 API Key 配额。' }];
+  }
+};
+
+export const chatWithDocument = async (
+  message: string,
+  docContent: string,
+  mimeType: 'text/plain' | 'application/pdf'
+): Promise<string> => {
+  try {
+    const parts: any[] = [];
+    
+    // Add Document Context
+    if (mimeType === 'application/pdf') {
+      parts.push({ inlineData: { mimeType: mimeType, data: docContent } });
+      parts.push({ text: "Here is the PDF document content for context." });
+    } else {
+      parts.push({ text: `Document Content:\n${docContent}\n\n` });
+    }
+
+    // Add User Question
+    parts.push({ text: message });
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: { parts },
+      config: {
+        systemInstruction: "你是一位专业的质量文档助手。请根据提供的文档内容回答用户的问题。如果问题超出文档范围，请说明。请使用中文回答，保持专业和简洁。",
+        temperature: 0.5,
+      }
+    });
+
+    return response.text || "无法生成回复。";
+  } catch (error) {
+    console.error("Doc Chat Error:", error);
+    return "与文档对话时发生错误，请稍后重试。";
   }
 };

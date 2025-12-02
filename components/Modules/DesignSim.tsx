@@ -14,7 +14,11 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip
 } from 'recharts';
 
-type SubModule = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER' | 'IMG_TO_3D';
+type ViewMode = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER' | 'IMG_TO_3D';
+
+interface DesignSimProps {
+  viewMode: ViewMode;
+}
 
 const RequirementsView = () => {
   const [parsingStep, setParsingStep] = useState(0); // 0: Idle, 1: Uploading, 2: Parsing, 3: Done
@@ -772,77 +776,53 @@ const ImageTo3DView = () => {
    );
 };
 
-const DesignSim: React.FC = () => {
-  const [activeModule, setActiveModule] = useState<SubModule>('SIMULATION');
+const DesignSim: React.FC<DesignSimProps> = ({ viewMode }) => {
+  // --- Render Header Logic ---
+  const renderHeader = () => {
+     let title = "智能产品定义与设计";
+     let icon = <Layers className="text-purple-400" />;
+     let desc = "端到端研发闭环：从需求解析到仿真驱动设计。";
+
+     if (viewMode === 'REQUIREMENTS') {
+        title = "智能需求工程";
+        icon = <Split className="text-blue-400" />;
+        desc = "AI 辅助的标书解析、条款提取与冲突检测。";
+     } else if (viewMode === 'SIMULATION') {
+        title = "智能设计与仿真";
+        icon = <Cpu className="text-purple-400" />;
+        desc = "实时代理模型 (Surrogate Model) 预测与设计参数优化。";
+     } else if (viewMode === 'BLENDER') {
+        title = "Blender Studio";
+        icon = <Box className="text-orange-400" />;
+        desc = "集成式 3D 评审、渲染与概念设计环境。";
+     } else if (viewMode === 'IMG_TO_3D') {
+        title = "图生 3D (Image to Mesh)";
+        icon = <ImagePlus className="text-emerald-400" />;
+        desc = "基于草图或照片快速生成参数化 3D 模型。";
+     }
+
+     return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 {icon} {title}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+           </div>
+        </div>
+     );
+  };
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
-      {/* Module Header & Nav */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Layers className="text-purple-400" />
-            智能产品定义与设计
-          </h2>
-          <p className="text-slate-400 text-xs mt-1">
-            端到端研发闭环：从需求解析到仿真驱动设计。
-          </p>
-        </div>
-
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          <button
-            onClick={() => setActiveModule('REQUIREMENTS')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-              activeModule === 'REQUIREMENTS' 
-                ? 'bg-slate-800 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Split size={14} />
-            1. 智能需求工程
-          </button>
-          <button
-            onClick={() => setActiveModule('SIMULATION')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-              activeModule === 'SIMULATION' 
-                ? 'bg-slate-800 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Cpu size={14} />
-            2. 智能设计与仿真
-          </button>
-          <button
-            onClick={() => setActiveModule('BLENDER')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-              activeModule === 'BLENDER' 
-                ? 'bg-slate-800 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Box size={14} />
-            3. Blender Studio
-          </button>
-          <button
-            onClick={() => setActiveModule('IMG_TO_3D')}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-              activeModule === 'IMG_TO_3D' 
-                ? 'bg-slate-800 text-white shadow-sm' 
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ImagePlus size={14} />
-            4. 图生 3D
-          </button>
-        </div>
-      </div>
+      {renderHeader()}
 
       {/* Main Content Area */}
       <div className="flex-1 min-h-0 relative">
-         {activeModule === 'REQUIREMENTS' && <RequirementsView />}
-         {activeModule === 'SIMULATION' && <SimulationView />}
-         {activeModule === 'BLENDER' && <BlenderStudioView />}
-         {activeModule === 'IMG_TO_3D' && <ImageTo3DView />}
+         {viewMode === 'REQUIREMENTS' && <RequirementsView />}
+         {viewMode === 'SIMULATION' && <SimulationView />}
+         {viewMode === 'BLENDER' && <BlenderStudioView />}
+         {viewMode === 'IMG_TO_3D' && <ImageTo3DView />}
       </div>
     </div>
   );

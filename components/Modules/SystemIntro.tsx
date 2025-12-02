@@ -56,10 +56,10 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
       {/* Header */}
       <div className="max-w-5xl mx-auto text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-          PLM AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Nexus</span>
+          Industrial AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Nexus</span>
         </h1>
         <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          新一代PLM智能平台架构概览
+          新一代工业智能平台架构概览
         </p>
       </div>
 
@@ -104,7 +104,7 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
             {/* Design */}
             <div className="space-y-4">
                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Design & Sim</div>
-               <ArchitectureCard title="智能设计" icon={PenTool} color="purple" onClick={() => setLayer(AppLayer.DESIGN_SIMULATION)}>
+               <ArchitectureCard title="智能设计" icon={PenTool} color="purple" onClick={() => setLayer(AppLayer.DESIGN_SIMULATION_CORE)}>
                  <FeaturePoint label="需求工程" desc="AI 解析标书 PDF 拆解条目" />
                  <FeaturePoint label="实时仿真" desc="代理模型 (Surrogate) 秒级预测" />
                  <FeaturePoint label="自动报告" desc="一键生成 Word 分析报告" />
@@ -114,7 +114,7 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
             {/* Engineering */}
             <div className="space-y-4">
                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Eng & Mfg</div>
-               <ArchitectureCard title="工程与制造" icon={Wrench} color="emerald" onClick={() => setLayer(AppLayer.ENGINEERING_MFG)}>
+               <ArchitectureCard title="工程与制造" icon={Wrench} color="emerald" onClick={() => setLayer(AppLayer.ENGINEERING_BOM)}>
                  <FeaturePoint label="智能 BOM" desc="查重选型与完整性审计" />
                  <FeaturePoint label="工艺规划" desc="几何特征识别推荐参数" />
                  <FeaturePoint label="智能变更" desc="ECN 影响范围自动分析" />
@@ -154,18 +154,18 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
              <div className="text-[10px] text-slate-600">Foundation</div>
           </div>
           <div className="flex-1 bg-slate-900/30 border border-slate-800 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-             <ArchitectureCard title="数据湖与治理" icon={Database} color="indigo" onClick={() => setLayer(AppLayer.DATA_FOUNDATION)}>
+             <ArchitectureCard title="数据湖与治理" icon={Database} color="indigo" onClick={() => setLayer(AppLayer.DATA_LAKE)}>
                <FeaturePoint label="多模态 ETL" desc="解析 CAD/CAE/Doc 等异构数据" />
                <FeaturePoint label="数据治理" desc="自动清洗脏数据与补全属性" />
              </ArchitectureCard>
              
-             <ArchitectureCard title="AI 模型工厂" icon={Cpu} color="indigo" onClick={() => setLayer(AppLayer.DATA_FOUNDATION)}>
+             <ArchitectureCard title="AI 模型工厂" icon={Cpu} color="indigo" onClick={() => setLayer(AppLayer.DATA_MODELS)}>
                <FeaturePoint label="仿真代理" desc="训练降阶模型加速 CAE" />
                <FeaturePoint label="代码大模型" desc="StarCoder 微调生成 PLM 代码" />
                <FeaturePoint label="私有 LLM" desc="统一管理 Llama3/Qwen 接口" />
              </ArchitectureCard>
 
-             <ArchitectureCard title="知识图谱中枢" icon={Share2} color="indigo" onClick={() => setLayer(AppLayer.DATA_FOUNDATION)}>
+             <ArchitectureCard title="知识图谱中枢" icon={Share2} color="indigo" onClick={() => setLayer(AppLayer.DATA_GRAPH)}>
                <FeaturePoint label="全链路图谱" desc="建立 RFLP + 仿真结果关联" />
                <FeaturePoint label="语义网络" desc="支持复杂的工程推理查询" />
              </ArchitectureCard>
@@ -182,21 +182,21 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
              </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-             <div onClick={() => setLayer(AppLayer.DEVOPS)} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center gap-4 cursor-pointer hover:border-pink-500/30 transition-colors">
+             <div onClick={() => setLayer(AppLayer.DEVOPS_CODEGEN)} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center gap-4 cursor-pointer hover:border-pink-500/30 transition-colors">
                 <div className="text-pink-400"><Terminal size={20}/></div>
                 <div>
                    <div className="font-medium text-slate-200 text-sm">代码生成器</div>
                    <div className="text-xs text-slate-500">Service, Action, Loader</div>
                 </div>
              </div>
-             <div onClick={() => setLayer(AppLayer.DEVOPS)} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center gap-4 cursor-pointer hover:border-pink-500/30 transition-colors">
+             <div onClick={() => setLayer(AppLayer.DEVOPS_TESTING)} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center gap-4 cursor-pointer hover:border-pink-500/30 transition-colors">
                 <div className="text-pink-400"><CheckCircle2 size={20}/></div>
                 <div>
                    <div className="font-medium text-slate-200 text-sm">自动化测试</div>
                    <div className="text-xs text-slate-500">生成测试用例与脚本</div>
                 </div>
              </div>
-             <div onClick={() => setLayer(AppLayer.DEVOPS)} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center gap-4 cursor-pointer hover:border-pink-500/30 transition-colors">
+             <div onClick={() => setLayer(AppLayer.DEVOPS_MIGRATION)} className="bg-slate-950 border border-slate-800 p-4 rounded-lg flex items-center gap-4 cursor-pointer hover:border-pink-500/30 transition-colors">
                 <div className="text-pink-400"><Shuffle size={20}/></div>
                 <div>
                    <div className="font-medium text-slate-200 text-sm">数据迁移助手</div>

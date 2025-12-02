@@ -9,7 +9,7 @@ import {
   FileCheck, Shield, Wand2, ChevronRight, UserCheck, Sparkles,
   FileSpreadsheet, ShieldAlert, ScanLine, Printer, Type, Eraser, MoveVertical,
   Upload, XCircle, FolderOpen, File, Edit3, Save, Eye, X,
-  Clock, TrendingUp, Users, LayoutDashboard, CheckSquare
+  Clock, TrendingUp, Users, LayoutDashboard, CheckSquare, Send, MessageSquarePlus
 } from 'lucide-react';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -18,7 +18,7 @@ import {
 import * as XLSX from 'xlsx';
 import * as mammoth from 'mammoth';
 import * as docx from 'docx-preview';
-import { reviewQMSDocument } from '../../services/geminiService';
+import { reviewQMSDocument, chatWithDocument } from '../../services/geminiService';
 
 // Define the view modes corresponding to AppLayer sub-menus
 type ViewMode = 'DIAGNOSIS' | 'VOC' | 'FORMAT' | 'PREDICTIVE' | 'DOCS';
@@ -789,9 +789,24 @@ const QMSDocumentView = () => {
    const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null); // For PDF Iframe
    const docxContainerRef = useRef<HTMLDivElement>(null);
    
+   // Right Side Panel State
+   const [rightTab, setRightTab] = useState<'REVIEW' | 'CHAT'>('CHAT');
+   
+   // Review State
    const [reviewing, setReviewing] = useState(false);
    const [reviewResult, setReviewResult] = useState<any[] | null>(null);
    const fileInputRef = useRef<HTMLInputElement>(null);
+
+   // Chat State
+   const [chatMessages, setChatMessages] = useState<{role: 'user'|'model', text: string}[]>([]);
+   const [chatInput, setChatInput] = useState('');
+   const [isChatting, setIsChatting] = useState(false);
+   const chatEndRef = useRef<HTMLDivElement>(null);
+
+   // Text Selection State
+   const [showFloatingBtn, setShowFloatingBtn] = useState(false);
+   const [floatingBtnPos, setFloatingBtnPos] = useState({ x: 0, y: 0 });
+   const [tempSelectedText, setTempSelectedText] = useState('');
 
    // Sync content when selection changes
    useEffect(() => {
@@ -821,8 +836,15 @@ const QMSDocumentView = () => {
          }
          // Clear previous review result when switching docs
          setReviewResult(null);
+         // Reset Chat for new document
+         setChatMessages([{ role: 'model', text: `您好，我是您的文档助手。您正在查看 ${doc.name}，有什么可以帮您？` }]);
       }
    }, [selectedDocId, documents]);
+
+   // Scroll chat to bottom
+   useEffect(() => {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+   }, [chatMessages]);
 
    const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -881,6 +903,84 @@ const QMSDocumentView = () => {
       
       // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
+   };
+
+   const handleSaveDocument = () => {
+      if (!selectedDoc) return;
+      // Update the document in state
+      const updatedDocs = documents.map(doc => {
+         if (doc.id === selectedDocId) {
+            return { ...doc, content: docContent };
+         }
+         return doc;
+      });
+      setDocuments(updatedDocs);
+      alert("文档内容已保存并同步至 AI 上下文。");
+   };
+
+   const handleSelection = (e: React.MouseEvent) => {
+      const selection = window.getSelection();
+      let text = '';
+
+      // Handle Textarea specific case if possible, otherwise generic selection
+      if (e.target instanceof HTMLTextAreaElement) {
+         const start = e.target.selectionStart;
+         const end = e.target.selectionEnd;
+         text = e.target.value.substring(start, end);
+      } else {
+         text = selection?.toString() || '';
+      }
+
+      if (text.trim().length > 0) {
+         // Position near mouse pointer within the container
+         const containerRect = e.currentTarget.getBoundingClientRect();
+         setFloatingBtnPos({
+            x: e.clientX - containerRect.left,
+            y: e.clientY - containerRect.top - 40 // slightly above
+         });
+         setTempSelectedText(text);
+         setShowFloatingBtn(true);
+      } else {
+         setShowFloatingBtn(false);
+      }
+   };
+
+   const handleQuoteToChat = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (tempSelectedText) {
+         setChatInput(prev => prev ? prev + '\n> 引用: ' + tempSelectedText + '\n' : '> 引用: ' + tempSelectedText + '\n');
+         setRightTab('CHAT');
+         setShowFloatingBtn(false);
+      }
+   };
+
+   const handleSendMessage = async () => {
+      if (!chatInput.trim() || !selectedDoc) return;
+      
+      const userMsg = chatInput;
+      setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+      setChatInput('');
+      setIsChatting(true);
+
+      // Determine content source
+      let contentToContext = '';
+      let mimeType: 'text/plain' | 'application/pdf' = 'text/plain';
+
+      if (selectedDoc.type === 'PDF' && selectedDoc.base64) {
+          contentToContext = selectedDoc.base64;
+          mimeType = 'application/pdf';
+      } else if (selectedDoc.type === 'Word' && selectedDoc.content) {
+          contentToContext = selectedDoc.content; // Use extracted text for Word
+          mimeType = 'text/plain';
+      } else {
+          contentToContext = docContent || selectedDoc.content || '';
+          mimeType = 'text/plain';
+      }
+
+      const aiResponse = await chatWithDocument(userMsg, contentToContext, mimeType);
+      
+      setChatMessages(prev => [...prev, { role: 'model', text: aiResponse }]);
+      setIsChatting(false);
    };
 
    const workflowSteps = [
@@ -1037,10 +1137,13 @@ const QMSDocumentView = () => {
                      ))}
                   </div>
 
-                  {/* Editor & Review Panel */}
+                  {/* Editor & Review/Chat Panel */}
                   <div className="flex-1 grid grid-cols-3 gap-4 min-h-0">
                      {/* Editor */}
-                     <div className="col-span-2 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative">
+                     <div 
+                        className="col-span-2 flex flex-col bg-slate-950 border border-slate-800 rounded-xl overflow-hidden relative"
+                        onMouseUp={handleSelection} // Listen for selection events on the wrapper
+                     >
                         <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 z-10 relative">
                            <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
                               <Edit3 size={14} className="text-emerald-400"/> 
@@ -1052,7 +1155,12 @@ const QMSDocumentView = () => {
                               ) : selectedDoc?.type === 'Word' ? (
                                  <span className="text-xs text-slate-500">Preview (Word)</span>
                               ) : (
-                                 <button className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><Save size={12}/> 保存</button>
+                                 <button 
+                                    onClick={handleSaveDocument}
+                                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                 >
+                                    <Save size={12}/> 保存并同步
+                                 </button>
                               )}
                            </div>
                         </div>
@@ -1073,72 +1181,170 @@ const QMSDocumentView = () => {
                                  onChange={(e) => setDocContent(e.target.value)}
                               />
                            )}
-                        </div>
-                     </div>
-
-                     {/* AI Review */}
-                     <div className="col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
-                        <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-                           <UserCheck size={18} className="text-purple-400" />
-                           智能评审与修改
-                        </h3>
-                        
-                        <div className="flex-1 overflow-y-auto">
-                           {!reviewResult ? (
-                              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center">
-                                 {reviewing ? (
-                                    <>
-                                       <RefreshCw size={32} className="animate-spin text-purple-500 mb-2"/>
-                                       <p className="text-xs">
-                                          {selectedDoc?.type === 'PDF' || selectedDoc?.type === 'Word' 
-                                             ? "AI 视觉引擎正在分析文档内容 (Compliance Check)..." 
-                                             : "正在分析条款合规性..."}
-                                       </p>
-                                    </>
-                                 ) : (
-                                    <>
-                                       <Bot size={32} className="opacity-20 mb-2"/>
-                                       <p className="text-xs px-4">
-                                          点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。支持 PDF (多模态) 与 Word 文本。
-                                       </p>
-                                    </>
-                                 )}
-                              </div>
-                           ) : (
-                              <div className="space-y-3 animate-in slide-in-from-right-4">
-                                 {reviewResult.map((res, i) => (
-                                    <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-lg hover:border-red-500/30 transition-colors">
-                                       <div className="flex items-center gap-2 mb-1">
-                                          <AlertTriangle size={12} className={res.type === 'compliance' ? "text-red-400" : "text-amber-400"}/>
-                                          <span className="text-xs font-bold text-slate-300 uppercase">{res.type} Issue</span>
-                                       </div>
-                                       <p className="text-xs text-slate-400 mb-2 italic">"{res.text}"</p>
-                                       <div className="bg-purple-500/10 border border-purple-500/20 p-2 rounded text-[10px] text-purple-300">
-                                          建议: {res.suggestion}
-                                       </div>
-                                    </div>
-                                 ))}
-                              </div>
-                           )}
-                        </div>
-
-                        <div className="mt-4 space-y-2">
-                           <button 
-                              onClick={handleSmartReview}
-                              disabled={reviewing}
-                              className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
-                           >
-                              <ScanLine size={14}/> 启动智能评审
-                           </button>
-                           {reviewResult && selectedDoc?.type !== 'Word' && selectedDoc?.type !== 'PDF' && (
-                              <button 
-                                 onClick={handleAutoModify}
-                                 className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2 border border-slate-700"
+                           
+                           {/* Floating Action Button */}
+                           {showFloatingBtn && (
+                              <button
+                                 onClick={handleQuoteToChat}
+                                 className="absolute bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-xl px-3 py-1.5 text-xs font-medium flex items-center gap-1 z-50 transition-all animate-in zoom-in-95 duration-200"
+                                 style={{ left: floatingBtnPos.x, top: floatingBtnPos.y }}
                               >
-                                 <Wand2 size={14}/> 一键采纳修改
+                                 <MessageSquarePlus size={14} />
+                                 发给 AI 助手
                               </button>
                            )}
                         </div>
+                     </div>
+
+                     {/* Right Panel: Smart Review or AI Chat */}
+                     <div className="col-span-1 bg-slate-900/50 border border-slate-800 rounded-xl p-0 flex flex-col overflow-hidden">
+                        
+                        {/* Right Panel Tabs */}
+                        <div className="flex border-b border-slate-800">
+                           <button
+                              onClick={() => setRightTab('CHAT')}
+                              className={`flex-1 py-3 text-xs font-medium text-center transition-colors ${
+                                 rightTab === 'CHAT' ? 'text-indigo-400 border-b-2 border-indigo-500 bg-slate-900' : 'text-slate-500 hover:text-slate-300'
+                              }`}
+                           >
+                              <div className="flex items-center justify-center gap-2"><Bot size={14}/> AI 助手</div>
+                           </button>
+                           <button
+                              onClick={() => setRightTab('REVIEW')}
+                              className={`flex-1 py-3 text-xs font-medium text-center transition-colors ${
+                                 rightTab === 'REVIEW' ? 'text-purple-400 border-b-2 border-purple-500 bg-slate-900' : 'text-slate-500 hover:text-slate-300'
+                              }`}
+                           >
+                              <div className="flex items-center justify-center gap-2"><UserCheck size={14}/> 智能评审</div>
+                           </button>
+                        </div>
+
+                        {rightTab === 'REVIEW' ? (
+                           <div className="flex-1 flex flex-col p-5 overflow-hidden">
+                              <h3 className="font-semibold text-white mb-4 flex items-center gap-2 shrink-0">
+                                 <ScanLine size={18} className="text-purple-400" />
+                                 合规性扫描
+                              </h3>
+                              
+                              <div className="flex-1 overflow-y-auto">
+                                 {!reviewResult ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center">
+                                       {reviewing ? (
+                                          <>
+                                             <RefreshCw size={32} className="animate-spin text-purple-500 mb-2"/>
+                                             <p className="text-xs">
+                                                {selectedDoc?.type === 'PDF' || selectedDoc?.type === 'Word' 
+                                                   ? "AI 视觉引擎正在分析文档内容 (Compliance Check)..." 
+                                                   : "正在分析条款合规性..."}
+                                             </p>
+                                          </>
+                                       ) : (
+                                          <>
+                                             <Bot size={32} className="opacity-20 mb-2"/>
+                                             <p className="text-xs px-4">
+                                                点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。
+                                             </p>
+                                          </>
+                                       )}
+                                    </div>
+                                 ) : (
+                                    <div className="space-y-3 animate-in slide-in-from-right-4">
+                                       {reviewResult.map((res, i) => (
+                                          <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-lg hover:border-red-500/30 transition-colors">
+                                             <div className="flex items-center gap-2 mb-1">
+                                                <AlertTriangle size={12} className={res.type === 'compliance' ? "text-red-400" : "text-amber-400"}/>
+                                                <span className="text-xs font-bold text-slate-300 uppercase">{res.type} Issue</span>
+                                             </div>
+                                             <p className="text-xs text-slate-400 mb-2 italic">"{res.text}"</p>
+                                             <div className="bg-purple-500/10 border border-purple-500/20 p-2 rounded text-[10px] text-purple-300">
+                                                建议: {res.suggestion}
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 )}
+                              </div>
+
+                              <div className="mt-4 space-y-2 shrink-0">
+                                 <button 
+                                    onClick={handleSmartReview}
+                                    disabled={reviewing}
+                                    className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+                                 >
+                                    <ScanLine size={14}/> 启动智能评审
+                                 </button>
+                                 {reviewResult && selectedDoc?.type !== 'Word' && selectedDoc?.type !== 'PDF' && (
+                                    <button 
+                                       onClick={handleAutoModify}
+                                       className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2 border border-slate-700"
+                                    >
+                                       <Wand2 size={14}/> 一键采纳修改
+                                    </button>
+                                 )}
+                              </div>
+                           </div>
+                        ) : (
+                           // --- CHAT INTERFACE ---
+                           <div className="flex-1 flex flex-col overflow-hidden">
+                              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                 {chatMessages.map((msg, i) => (
+                                    <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                       <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
+                                          msg.role === 'model' ? 'bg-indigo-600' : 'bg-slate-700'
+                                       }`}>
+                                          {msg.role === 'model' ? <Bot size={16} className="text-white" /> : <Users size={16} className="text-slate-300" />}
+                                       </div>
+                                       <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
+                                          msg.role === 'user' 
+                                             ? 'bg-blue-600 text-white rounded-br-none' 
+                                             : 'bg-slate-800 border border-slate-700 text-slate-200 rounded-bl-none'
+                                       }`}>
+                                          {msg.text}
+                                       </div>
+                                    </div>
+                                 ))}
+                                 {isChatting && (
+                                    <div className="flex gap-3 animate-pulse">
+                                       <div className="w-8 h-8 rounded-full bg-indigo-600 flex-shrink-0 flex items-center justify-center">
+                                          <Bot size={16} className="text-white" />
+                                       </div>
+                                       <div className="bg-slate-800 border border-slate-700 px-3 py-2 rounded-2xl rounded-bl-none">
+                                          <div className="flex space-x-1">
+                                             <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                             <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                             <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                          </div>
+                                       </div>
+                                    </div>
+                                 )}
+                                 <div ref={chatEndRef} />
+                              </div>
+                              <div className="p-3 border-t border-slate-800 bg-slate-900">
+                                 <div className="relative">
+                                    <textarea 
+                                       value={chatInput}
+                                       onChange={(e) => setChatInput(e.target.value)}
+                                       onKeyDown={(e) => {
+                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                             e.preventDefault();
+                                             handleSendMessage();
+                                          }
+                                       }}
+                                       placeholder="询问文档相关问题..."
+                                       className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-3 pr-10 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none h-10 scrollbar-hide"
+                                       disabled={isChatting}
+                                    />
+                                    <button 
+                                       onClick={handleSendMessage}
+                                       disabled={isChatting || !chatInput.trim()}
+                                       className="absolute right-1.5 top-1.5 p-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition-colors disabled:bg-slate-800 disabled:text-slate-600"
+                                    >
+                                       <Send size={12}/>
+                                    </button>
+                                 </div>
+                              </div>
+                           </div>
+                        )}
                      </div>
                   </div>
                </div>

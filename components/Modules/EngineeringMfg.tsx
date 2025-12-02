@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   ListTree, Factory, GitPullRequest, ScanEye, AlertTriangle, 
@@ -9,7 +10,11 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell 
 } from 'recharts';
 
-type Tab = 'BOM' | 'PROCESS' | 'CHANGE';
+type ViewMode = 'BOM' | 'PROCESS' | 'CHANGE';
+
+interface EngineeringMfgProps {
+  viewMode: ViewMode;
+}
 
 // --- BOM Management View ---
 
@@ -124,7 +129,7 @@ const BOMManagerView = () => {
                      <button className="mt-2 w-full py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded">直接选用</button>
                   </div>
 
-                  <div className="bg-slate-950 p-3 rounded border border-slate-700 opacity-60">
+                  <div className="bg-slate-900 p-3 rounded border border-slate-700 opacity-60">
                      <div className="absolute top-0 right-0 bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5">85% 相似</div>
                      <div className="flex gap-3">
                         <div className="w-12 h-12 bg-slate-800 rounded flex items-center justify-center text-xs text-slate-500">3D</div>
@@ -440,52 +445,48 @@ const ChangeManagerView = () => {
 
 // --- Main Component ---
 
-const EngineeringMfg: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('BOM');
+const EngineeringMfg: React.FC<EngineeringMfgProps> = ({ viewMode }) => {
+  // --- Render Header Logic ---
+  const renderHeader = () => {
+     let title = "工程与制造";
+     let icon = <Wrench className="text-blue-500" />;
+     let desc = "BOM 完整性审计、自动化工艺规划与变更影响分析。";
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'BOM', label: '智能 BOM 管理', icon: ListTree },
-    { id: 'PROCESS', label: '智能工艺规划', icon: Factory },
-    { id: 'CHANGE', label: '智能变更管理', icon: GitPullRequest },
-  ];
+     if (viewMode === 'BOM') {
+        title = "智能 BOM 管理";
+        icon = <ListTree className="text-indigo-400" />;
+        desc = "EBOM 结构管理、查重选型与完整性审计。";
+     } else if (viewMode === 'PROCESS') {
+        title = "智能工艺规划";
+        icon = <Factory className="text-emerald-400" />;
+        desc = "自动化特征识别与 CNC 工艺路线生成。";
+     } else if (viewMode === 'CHANGE') {
+        title = "智能变更管理";
+        icon = <GitPullRequest className="text-red-400" />;
+        desc = "ECN 影响范围分析、成本估算与风险预警。";
+     }
+
+     return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 {icon} {title}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+           </div>
+        </div>
+     );
+  };
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
-      {/* Header & Nav */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Wrench className="text-blue-500" />
-            工程与制造
-          </h2>
-          <p className="text-slate-400 text-xs mt-1">
-            BOM 完整性审计、自动化工艺规划与变更影响分析。
-          </p>
-        </div>
-
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-slate-800 text-white shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {renderHeader()}
 
       {/* Content */}
       <div className="flex-1 min-h-0 relative">
-         {activeTab === 'BOM' && <BOMManagerView />}
-         {activeTab === 'PROCESS' && <ProcessPlannerView />}
-         {activeTab === 'CHANGE' && <ChangeManagerView />}
+         {viewMode === 'BOM' && <BOMManagerView />}
+         {viewMode === 'PROCESS' && <ProcessPlannerView />}
+         {viewMode === 'CHANGE' && <ChangeManagerView />}
       </div>
     </div>
   );

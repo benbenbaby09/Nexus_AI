@@ -17,45 +17,81 @@ interface CopilotProps {
 const CONTEXT_CONFIG: Record<AppLayer, { title: string; type: string; id: string; risk?: string }> = {
   [AppLayer.SYSTEM_INTRO]: { title: '平台概览', type: 'System', id: 'SYS-INTRO' },
   [AppLayer.HOME]: { title: '个人工作台', type: 'Dashboard', id: 'DASH-001' },
-  [AppLayer.DESIGN_SIMULATION]: { title: '高压涡轮叶片总成', type: 'CAD Model', id: 'ASM-2024-X', risk: 'Detected High Stress' },
-  [AppLayer.ENGINEERING_MFG]: { title: 'ECN-2024-055 (材料变更)', type: 'Change Notice', id: 'ECN-55' },
-  [AppLayer.DATA_FOUNDATION]: { title: '钛合金 Ti-6Al-4V', type: 'Material Data', id: 'MAT-88' },
   
-  // Quality Sub-modules
+  // Design
+  [AppLayer.DESIGN_REQUIREMENTS]: { title: '动力电池包规格书', type: 'Requirement Doc', id: 'REQ-DOC-2024' },
+  [AppLayer.DESIGN_SIMULATION_CORE]: { title: '涡轮叶片热应力模型', type: 'CAE Model', id: 'SIM-HPT-04', risk: 'High Stress' },
+  [AppLayer.DESIGN_BLENDER]: { title: '整机渲染场景', type: '3D Scene', id: 'SCN-RENDER-01' },
+  [AppLayer.DESIGN_IMG23D]: { title: '草图输入', type: 'Image Source', id: 'IMG-SKETCH-09' },
+  [AppLayer.DESIGN_SIMULATION]: { title: '设计中心', type: 'Hub', id: 'DES-HUB' },
+
+  // Engineering
+  [AppLayer.ENGINEERING_BOM]: { title: '高压涡轮总成 BOM', type: 'EBOM', id: 'ASM-2024-001' },
+  [AppLayer.ENGINEERING_PROCESS]: { title: '机匣加工工艺路线', type: 'MPM', id: 'PP-CASE-02' },
+  [AppLayer.ENGINEERING_CHANGE]: { title: 'ECN-2024-055', type: 'Change Notice', id: 'ECN-55' },
+  [AppLayer.ENGINEERING_MFG]: { title: '工程中心', type: 'Hub', id: 'ENG-HUB' },
+
+  // Data
+  [AppLayer.DATA_LAKE]: { title: 'Windchill Connector', type: 'ETL Pipeline', id: 'CONN-WC-01' },
+  [AppLayer.DATA_MODELS]: { title: 'Struct-Sim-Proxy', type: 'AI Model', id: 'MDL-SIM-V4' },
+  [AppLayer.DATA_GRAPH]: { title: '全链路图谱 V2', type: 'Knowledge Graph', id: 'KG-MAIN' },
+  [AppLayer.DATA_FOUNDATION]: { title: '数据底座', type: 'Platform', id: 'DATA-PLAT' },
+
+  // Quality
   [AppLayer.QUALITY_PREDICTIVE]: { title: '叶根裂纹分析', type: 'Predictive Model', id: 'QI-992' },
   [AppLayer.QUALITY_DIAGNOSIS]: { title: '故障知识库', type: 'RAG Engine', id: 'KB-CORE' },
   [AppLayer.QUALITY_VOC]: { title: 'Q3 客户反馈报告', type: 'Report', id: 'VOC-Q3' },
   [AppLayer.QUALITY_FORMAT]: { title: 'Excel 合规检查器', type: 'Tool', id: 'FMT-CHK' },
   [AppLayer.QUALITY_DOCS]: { title: '质量手册 ISO9001', type: 'Document', id: 'QM-001' },
 
-  // Collaboration Sub-modules
+  // Collaboration
   [AppLayer.COLLABORATION_PROJECT]: { title: 'Q4 交付项目计划', type: 'Project', id: 'PRJ-2024-Q4' },
   [AppLayer.COLLABORATION_BI]: { title: '企业运营大屏', type: 'Dashboard', id: 'BI-CORP-01' },
   [AppLayer.COLLABORATION_SIMULATION]: { title: '供应链风险推演', type: 'Simulation', id: 'SIM-SC-99' },
-  [AppLayer.COLLABORATION]: { title: '协同中心', type: 'Hub', id: 'COLLAB-HUB' }, // Fallback
+  [AppLayer.COLLABORATION]: { title: '协同中心', type: 'Hub', id: 'COLLAB-HUB' },
 
-  [AppLayer.DEVOPS]: { title: 'Windchill Connector Logs', type: 'System Log', id: 'LOG-500' },
+  // DevOps
+  [AppLayer.DEVOPS_CODEGEN]: { title: 'Windchill Service Gen', type: 'Code Tool', id: 'GEN-SVC' },
+  [AppLayer.DEVOPS_TESTING]: { title: 'Auto Test Suite', type: 'Test Runner', id: 'TEST-RUN-01' },
+  [AppLayer.DEVOPS_MIGRATION]: { title: 'Legacy DB Mapping', type: 'Migration', id: 'MIG-JOB-05' },
+  [AppLayer.DEVOPS]: { title: 'DevOps Center', type: 'Hub', id: 'DEV-HUB' },
 };
 
 const SUGGESTIONS: Record<AppLayer, string[]> = {
   [AppLayer.SYSTEM_INTRO]: ['Nexus 平台有哪些功能？', '如何开始使用？'],
   [AppLayer.HOME]: ['总结今天的待办事项', '查看系统健康状态'],
-  [AppLayer.DESIGN_SIMULATION]: ['运行结构强度仿真', '检查几何干涉', '优化网格质量'],
-  [AppLayer.ENGINEERING_MFG]: ['分析变更成本影响', '查找受影响的 BOM', '生成合规性报告'],
-  [AppLayer.DATA_FOUNDATION]: ['查找相似材料', '显示引用关系'],
+  
+  [AppLayer.DESIGN_REQUIREMENTS]: ['提取文档中的关键性能指标', '检查需求冲突'],
+  [AppLayer.DESIGN_SIMULATION_CORE]: ['运行结构强度仿真', '优化壁厚参数', '解释应力云图'],
+  [AppLayer.DESIGN_BLENDER]: ['渲染一张爆炸图', '调整环境光照'],
+  [AppLayer.DESIGN_IMG23D]: ['将草图转换为 3D', '识别特征尺寸'],
+  [AppLayer.DESIGN_SIMULATION]: ['开始新设计任务'],
+
+  [AppLayer.ENGINEERING_BOM]: ['检查 BOM 完整性', '查找替代物料', '导出 EBOM'],
+  [AppLayer.ENGINEERING_PROCESS]: ['生成数控加工路线', '推荐切削参数'],
+  [AppLayer.ENGINEERING_CHANGE]: ['评估变更成本', '查找受影响的下游对象'],
+  [AppLayer.ENGINEERING_MFG]: ['查看工程概览'],
+
+  [AppLayer.DATA_LAKE]: ['检查数据源连接状态', '显示最近的 ETL 错误'],
+  [AppLayer.DATA_MODELS]: ['训练新的仿真代理模型', '查看模型精度指标'],
+  [AppLayer.DATA_GRAPH]: ['查找实体的上下游关系', '分析变更影响路径'],
+  [AppLayer.DATA_FOUNDATION]: ['查看数据资产概览'],
+
   [AppLayer.QUALITY_PREDICTIVE]: ['根本原因分析 (RCA)', '预测下个月故障率'],
   [AppLayer.QUALITY_DIAGNOSIS]: ['搜索类似历史故障', '如何解决 E04 报警?'],
   [AppLayer.QUALITY_VOC]: ['总结最近的负面反馈', '客户主要抱怨什么?'],
   [AppLayer.QUALITY_FORMAT]: ['检查 Excel 分页符', '扫描签名缺失', '修正字体格式'],
   [AppLayer.QUALITY_DOCS]: ['搜索质量程序文件', '创建新文档模板'],
   
-  // Collaboration Sub-modules
   [AppLayer.COLLABORATION_PROJECT]: ['更新项目进度', '发送会议纪要', '查看甘特图'],
   [AppLayer.COLLABORATION_BI]: ['分析本月成本偏差', '预测下季度交付率', '查看供应商绩效'],
   [AppLayer.COLLABORATION_SIMULATION]: ['模拟供应商断供影响', '评估原材料涨价风险'],
-  [AppLayer.COLLABORATION]: ['查看协同概览'], // Fallback
+  [AppLayer.COLLABORATION]: ['查看协同概览'],
 
-  [AppLayer.DEVOPS]: ['解释错误日志', '生成 API 测试脚本'],
+  [AppLayer.DEVOPS_CODEGEN]: ['生成遍历 BOM 的服务代码', '创建新的 Action 类'],
+  [AppLayer.DEVOPS_TESTING]: ['生成单元测试用例', '运行所有 UI 测试'],
+  [AppLayer.DEVOPS_MIGRATION]: ['自动映射旧系统字段', '验证数据迁移完整性'],
+  [AppLayer.DEVOPS]: ['查看系统日志'],
 };
 
 const Copilot: React.FC<CopilotProps> = ({ currentPersona, currentLayer }) => {
