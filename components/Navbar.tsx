@@ -86,7 +86,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
     <div className="w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen transition-all duration-300 flex-shrink-0">
       <div className="p-4 flex items-center justify-center lg:justify-start gap-3 border-b border-slate-800 h-16">
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
-          N
+          PLM
         </div>
         <span className="hidden lg:block font-bold text-lg tracking-tight text-white">
           Nexus AI
