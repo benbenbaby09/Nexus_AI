@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   CalendarDays, BarChart3, GitMerge, Users, AlertTriangle, 
@@ -10,7 +11,9 @@ import {
   LineChart, Line, AreaChart, Area, ComposedChart, Scatter
 } from 'recharts';
 
-type Tab = 'PROJECT' | 'BI' | 'SIMULATION';
+interface CollaborationProps {
+  viewMode: 'PROJECT' | 'BI' | 'SIMULATION';
+}
 
 // --- Project Synergy View (Smart WBS) ---
 
@@ -445,52 +448,48 @@ const SimulationView = () => {
 
 // --- Main Component ---
 
-const Collaboration: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('PROJECT');
+const Collaboration: React.FC<CollaborationProps> = ({ viewMode = 'PROJECT' }) => {
+  // --- Render Header Logic ---
+  const renderHeader = () => {
+     let title = "协同与决策支持";
+     let icon = <Users className="text-indigo-500" />;
+     let desc = "从数据驱动的项目管理到企业级战略推演。";
 
-  const tabs: { id: Tab; label: string; icon: any }[] = [
-    { id: 'PROJECT', label: '智能项目协同', icon: GitMerge },
-    { id: 'BI', label: '企业数字孪生 (BI)', icon: LayoutDashboard },
-    { id: 'SIMULATION', label: '决策沙盘 (What-If)', icon: Shuffle },
-  ];
+     if (viewMode === 'PROJECT') {
+        title = "智能项目协同";
+        icon = <GitMerge className="text-blue-400" />;
+        desc = "基于 AI 的 WBS 自动生成与风险预测。";
+     } else if (viewMode === 'BI') {
+        title = "企业数字孪生 (BI)";
+        icon = <LayoutDashboard className="text-purple-400" />;
+        desc = "通过自然语言查询实时企业运营指标。";
+     } else if (viewMode === 'SIMULATION') {
+        title = "决策沙盘 (What-If)";
+        icon = <Shuffle className="text-orange-400" />;
+        desc = "供应链断供与成本变动的模拟推演。";
+     }
+
+     return (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+           <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                 {icon} {title}
+              </h2>
+              <p className="text-slate-400 text-xs mt-1">{desc}</p>
+           </div>
+        </div>
+     );
+  };
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
-      {/* Header & Nav */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Users className="text-indigo-500" />
-            协同与决策支持
-          </h2>
-          <p className="text-slate-400 text-xs mt-1">
-            从数据驱动的项目管理到企业级战略推演。
-          </p>
-        </div>
-
-        <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 text-xs font-medium rounded-md transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-slate-800 text-white shadow-sm' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <tab.icon size={14} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {renderHeader()}
 
       {/* Content */}
       <div className="flex-1 min-h-0 relative">
-         {activeTab === 'PROJECT' && <ProjectSynergyView />}
-         {activeTab === 'BI' && <BICockpitView />}
-         {activeTab === 'SIMULATION' && <SimulationView />}
+         {viewMode === 'PROJECT' && <ProjectSynergyView />}
+         {viewMode === 'BI' && <BICockpitView />}
+         {viewMode === 'SIMULATION' && <SimulationView />}
       </div>
     </div>
   );

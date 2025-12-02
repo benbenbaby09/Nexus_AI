@@ -16,7 +16,9 @@ import {
   Stethoscope,
   MessageSquare,
   Activity,
-  BookOpen
+  BookOpen,
+  GitMerge,
+  Shuffle
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -34,7 +36,7 @@ interface NavItem {
 
 const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
   // State to track expanded groups
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['QUALITY_GROUP']));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['QUALITY_GROUP', 'COLLAB_GROUP']));
 
   const navItems: NavItem[] = [
     { id: AppLayer.SYSTEM_INTRO, label: '平台概览', icon: <Globe size={20} /> },
@@ -54,7 +56,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
         { id: AppLayer.QUALITY_DOCS, label: '文档中心 (QMS)', icon: <BookOpen size={16} /> },
       ]
     },
-    { id: AppLayer.COLLABORATION, label: '协同合作', icon: <Users size={20} /> },
+    { 
+      groupKey: 'COLLAB_GROUP',
+      label: '协同与决策', 
+      icon: <Users size={20} />,
+      children: [
+        { id: AppLayer.COLLABORATION_PROJECT, label: '智能项目协同', icon: <GitMerge size={16} /> },
+        { id: AppLayer.COLLABORATION_BI, label: '企业数字孪生 (BI)', icon: <LayoutDashboard size={16} /> },
+        { id: AppLayer.COLLABORATION_SIMULATION, label: '决策沙盘 (What-If)', icon: <Shuffle size={16} /> },
+      ]
+    },
     { id: AppLayer.DEVOPS, label: 'DevOps 中心', icon: <TerminalSquare size={20} /> },
   ];
 

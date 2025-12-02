@@ -28,7 +28,12 @@ const CONTEXT_CONFIG: Record<AppLayer, { title: string; type: string; id: string
   [AppLayer.QUALITY_FORMAT]: { title: 'Excel 合规检查器', type: 'Tool', id: 'FMT-CHK' },
   [AppLayer.QUALITY_DOCS]: { title: '质量手册 ISO9001', type: 'Document', id: 'QM-001' },
 
-  [AppLayer.COLLABORATION]: { title: 'Q4 交付项目计划', type: 'Project', id: 'PRJ-2024-Q4' },
+  // Collaboration Sub-modules
+  [AppLayer.COLLABORATION_PROJECT]: { title: 'Q4 交付项目计划', type: 'Project', id: 'PRJ-2024-Q4' },
+  [AppLayer.COLLABORATION_BI]: { title: '企业运营大屏', type: 'Dashboard', id: 'BI-CORP-01' },
+  [AppLayer.COLLABORATION_SIMULATION]: { title: '供应链风险推演', type: 'Simulation', id: 'SIM-SC-99' },
+  [AppLayer.COLLABORATION]: { title: '协同中心', type: 'Hub', id: 'COLLAB-HUB' }, // Fallback
+
   [AppLayer.DEVOPS]: { title: 'Windchill Connector Logs', type: 'System Log', id: 'LOG-500' },
 };
 
@@ -43,7 +48,13 @@ const SUGGESTIONS: Record<AppLayer, string[]> = {
   [AppLayer.QUALITY_VOC]: ['总结最近的负面反馈', '客户主要抱怨什么?'],
   [AppLayer.QUALITY_FORMAT]: ['检查 Excel 分页符', '扫描签名缺失', '修正字体格式'],
   [AppLayer.QUALITY_DOCS]: ['搜索质量程序文件', '创建新文档模板'],
-  [AppLayer.COLLABORATION]: ['更新项目进度', '发送会议纪要'],
+  
+  // Collaboration Sub-modules
+  [AppLayer.COLLABORATION_PROJECT]: ['更新项目进度', '发送会议纪要', '查看甘特图'],
+  [AppLayer.COLLABORATION_BI]: ['分析本月成本偏差', '预测下季度交付率', '查看供应商绩效'],
+  [AppLayer.COLLABORATION_SIMULATION]: ['模拟供应商断供影响', '评估原材料涨价风险'],
+  [AppLayer.COLLABORATION]: ['查看协同概览'], // Fallback
+
   [AppLayer.DEVOPS]: ['解释错误日志', '生成 API 测试脚本'],
 };
 

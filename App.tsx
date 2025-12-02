@@ -53,8 +53,18 @@ const App: React.FC = () => {
       case AppLayer.QUALITY_DOCS:
         return <QualityService viewMode="DOCS" />;
 
+      // Collaboration Sub-modules
+      case AppLayer.COLLABORATION_PROJECT:
+        return <Collaboration viewMode="PROJECT" />;
+      case AppLayer.COLLABORATION_BI:
+        return <Collaboration viewMode="BI" />;
+      case AppLayer.COLLABORATION_SIMULATION:
+        return <Collaboration viewMode="SIMULATION" />;
+      case AppLayer.COLLABORATION: // Fallback
+        return <Collaboration viewMode="PROJECT" />;
+
       case AppLayer.COLLABORATION:
-        return <Collaboration />;
+        return <Collaboration viewMode="PROJECT" />;
       case AppLayer.DEVOPS:
         return <DevOps />;
       default:

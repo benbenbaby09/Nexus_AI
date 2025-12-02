@@ -27,7 +27,11 @@ const LAYER_CONTEXT: Record<AppLayer, string> = {
   [AppLayer.QUALITY_FORMAT]: "用户正在使用格式合规卫士检查文档。",
   [AppLayer.QUALITY_DOCS]: "用户正在浏览质量文档中心。",
 
-  [AppLayer.COLLABORATION]: "用户正在项目管理与 BI 决策模块。",
+  [AppLayer.COLLABORATION_PROJECT]: "用户正在智能项目协同模块，查看甘特图和任务 WBS。",
+  [AppLayer.COLLABORATION_BI]: "用户正在企业数字孪生 BI 模块，使用自然语言查询运营指标。",
+  [AppLayer.COLLABORATION_SIMULATION]: "用户正在决策沙盘 (What-If) 模块，推演供应链风险。",
+  
+  [AppLayer.COLLABORATION]: "用户正在协同与决策模块。",
   [AppLayer.DEVOPS]: "用户正在 DevOps 与实施中心。",
 };
 
