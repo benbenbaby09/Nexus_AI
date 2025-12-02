@@ -8,7 +8,7 @@ import {
   GitMerge, BookOpen, PenTool, GitCompare, Library, Bot, History,
   FileCheck, Shield, Wand2, ChevronRight, UserCheck, Sparkles,
   FileSpreadsheet, ShieldAlert, ScanLine, Printer, Type, Eraser, MoveVertical,
-  Upload, XCircle, FolderOpen, File, Edit3, Save, Eye,
+  Upload, XCircle, FolderOpen, File, Edit3, Save, Eye, X,
   Clock, TrendingUp, Users, LayoutDashboard, CheckSquare
 } from 'lucide-react';
 import {
@@ -553,11 +553,13 @@ const FormatComplianceView = () => {
 // --- VoC Analysis View ---
 
 const VoCAnalysisView = () => {
+  const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+
   const feedbacks = [
-    { id: 'FB-001', text: '新款手柄的握持感很差，用久了手腕疼。', sentiment: 'Negative', cat: 'Design', score: -0.8 },
-    { id: 'FB-002', text: '电池续航比宣传的短了整整两小时！', sentiment: 'Negative', cat: 'Design', score: -0.9 },
-    { id: 'FB-003', text: 'APP 连接速度很快，界面也很好看。', sentiment: 'Positive', cat: 'Software', score: 0.7 },
-    { id: 'FB-004', text: '外壳接缝处有明显的毛刺，做工不行。', sentiment: 'Negative', cat: 'Manufacturing', score: -0.6 },
+    { id: 'FB-001', text: '新款手柄的握持感很差，用久了手腕疼。', sentiment: 'Negative', cat: 'Design', score: -0.8, image: 'https://images.unsplash.com/photo-1593118247619-e2d6f056869e?q=80&w=400&auto=format&fit=crop', user: 'User_992', date: '2024-10-24' },
+    { id: 'FB-002', text: '电池续航比宣传的短了整整两小时！', sentiment: 'Negative', cat: 'Design', score: -0.9, image: 'https://images.unsplash.com/photo-1623126908029-58cb08a2b272?q=80&w=400&auto=format&fit=crop', user: 'Mike_T', date: '2024-10-23' },
+    { id: 'FB-003', text: 'APP 连接速度很快，界面也很好看。', sentiment: 'Positive', cat: 'Software', score: 0.7, image: 'https://images.unsplash.com/photo-1551650975-87deedd944c3?q=80&w=400&auto=format&fit=crop', user: 'Sarah_L', date: '2024-10-22' },
+    { id: 'FB-004', text: '外壳接缝处有明显的毛刺，做工不行。', sentiment: 'Negative', cat: 'Manufacturing', score: -0.6, image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=400&auto=format&fit=crop', user: 'David_W', date: '2024-10-21' },
   ];
 
   const chartData = [
@@ -568,7 +570,77 @@ const VoCAnalysisView = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500 relative">
+       
+       {/* Feedback Detail Modal */}
+       {selectedFeedback && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+             <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl relative flex flex-col md:flex-row h-[500px] md:h-[400px]">
+                <button 
+                  onClick={() => setSelectedFeedback(null)} 
+                  className="absolute top-4 right-4 p-1 bg-black/50 text-white rounded-full hover:bg-black/80 transition-colors z-20"
+                >
+                   <X size={18} />
+                </button>
+                
+                {/* Left: Image */}
+                <div className="w-full md:w-1/2 bg-black relative flex items-center justify-center overflow-hidden">
+                   <img 
+                     src={selectedFeedback.image} 
+                     alt="Feedback Evidence" 
+                     className="w-full h-full object-cover opacity-90 hover:scale-105 transition-transform duration-700"
+                   />
+                   <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                      <div className="text-white text-sm font-semibold flex items-center gap-2">
+                         <CameraIcon size={14}/> 客户上传凭证
+                      </div>
+                   </div>
+                </div>
+                
+                {/* Right: Details */}
+                <div className="w-full md:w-1/2 p-6 flex flex-col bg-slate-900">
+                   <div className="flex justify-between items-start mb-4">
+                      <div>
+                         <div className="text-xs text-slate-500 font-mono mb-1">Feedback ID: {selectedFeedback.id}</div>
+                         <div className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border ${
+                            selectedFeedback.sentiment === 'Negative' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                         }`}>
+                            {selectedFeedback.sentiment === 'Negative' ? <ThumbsDown size={12}/> : <ThumbsUp size={12}/>}
+                            {selectedFeedback.sentiment}
+                         </div>
+                      </div>
+                      <div className="text-right">
+                         <div className="text-sm font-medium text-slate-200">{selectedFeedback.user}</div>
+                         <div className="text-xs text-slate-500">{selectedFeedback.date}</div>
+                      </div>
+                   </div>
+
+                   <h4 className="text-sm font-semibold text-slate-200 mb-2">问题描述</h4>
+                   <p className="text-sm text-slate-400 leading-relaxed mb-6 flex-1 overflow-y-auto">
+                      {selectedFeedback.text}
+                   </p>
+
+                   <div className="mt-auto pt-4 border-t border-slate-800 space-y-3">
+                      <div className="flex justify-between text-xs">
+                         <span className="text-slate-500">分类归属:</span>
+                         <span className="text-indigo-400 font-medium">{selectedFeedback.cat}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                         <span className="text-slate-500">AI 严重度评分:</span>
+                         <span className={`font-mono font-bold ${selectedFeedback.score < -0.5 ? 'text-red-400' : 'text-emerald-400'}`}>{selectedFeedback.score}</span>
+                      </div>
+                      
+                      {selectedFeedback.sentiment === 'Negative' && (
+                         <button className="w-full py-2 bg-red-600 hover:bg-red-500 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 transition-all">
+                            <Share2 size={14}/> 创建 Jira/Windchill 工单
+                         </button>
+                      )}
+                   </div>
+                </div>
+             </div>
+          </div>
+       )}
+
        {/* Left: Feedback Stream & Routing */}
        <div className="lg:col-span-7 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
           <div className="flex justify-between items-center mb-4">
@@ -583,7 +655,11 @@ const VoCAnalysisView = () => {
 
           <div className="flex-1 overflow-y-auto space-y-3 pr-2">
              {feedbacks.map((fb, i) => (
-                <div key={i} className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-slate-700 transition-colors group">
+                <div 
+                  key={i} 
+                  onClick={() => setSelectedFeedback(fb)}
+                  className="p-3 bg-slate-950 border border-slate-800 rounded-lg hover:border-slate-600 hover:bg-slate-900 transition-all cursor-pointer group"
+                >
                    <div className="flex justify-between items-start mb-1">
                       <div className="flex items-center gap-2">
                          <span className={`w-2 h-2 rounded-full ${fb.sentiment === 'Negative' ? 'bg-red-500' : 'bg-emerald-500'}`}></span>
@@ -595,19 +671,27 @@ const VoCAnalysisView = () => {
                          'bg-blue-500/10 text-blue-400 border-blue-500/20'
                       }`}>{fb.cat}</span>
                    </div>
-                   <p className="text-sm text-slate-200 mb-2">{fb.text}</p>
-                   
-                   {/* Auto-Routing Action */}
-                   {fb.cat === 'Design' && fb.sentiment === 'Negative' && (
-                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-800/50">
-                         <div className="flex items-center gap-1 text-[10px] text-red-400">
-                            <AlertTriangle size={10} /> 自动归类: 设计缺陷
-                         </div>
-                         <button className="flex items-center gap-1 px-2 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs rounded border border-red-500/30 transition-colors">
-                            <Share2 size={12} /> 创建改进任务 (Windchill)
-                         </button>
+                   <div className="flex gap-3">
+                      {/* Thumbnail */}
+                      <div className="w-12 h-12 bg-slate-900 rounded overflow-hidden flex-shrink-0 border border-slate-800 mt-1">
+                         <img src={fb.image} alt="thumb" className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity"/>
                       </div>
-                   )}
+                      <div className="flex-1 min-w-0">
+                         <p className="text-sm text-slate-200 mb-2 truncate group-hover:text-white transition-colors">{fb.text}</p>
+                         
+                         {/* Auto-Routing Action Preview */}
+                         {fb.cat === 'Design' && fb.sentiment === 'Negative' && (
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-800/50">
+                               <div className="flex items-center gap-1 text-[10px] text-red-400">
+                                  <AlertTriangle size={10} /> 自动归类: 设计缺陷
+                               </div>
+                               <span className="text-[10px] text-slate-500 flex items-center gap-1 group-hover:text-blue-400">
+                                  点击查看详情 <ArrowRight size={10}/>
+                               </span>
+                            </div>
+                         )}
+                      </div>
+                   </div>
                 </div>
              ))}
           </div>
@@ -667,6 +751,11 @@ const VoCAnalysisView = () => {
     </div>
   );
 };
+
+// Helper Icon
+const CameraIcon = ({size, className}: {size:number, className?:string}) => (
+   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+);
 
 // --- QMS Document Center View with Intelligent Review & Workflow ---
 
