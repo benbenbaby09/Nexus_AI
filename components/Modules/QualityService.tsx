@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Activity, Stethoscope, Search, MessageSquare, ThumbsUp, ThumbsDown,
   BarChart3, RefreshCw, Zap, Database, ArrowRight, Settings, AlertTriangle,
@@ -16,6 +16,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
 } from 'recharts';
 import * as XLSX from 'xlsx';
+import * as mammoth from 'mammoth';
 
 // Define the view modes corresponding to AppLayer sub-menus
 type ViewMode = 'DIAGNOSIS' | 'VOC' | 'FORMAT' | 'PREDICTIVE' | 'DOCS';
@@ -759,19 +760,93 @@ const CameraIcon = ({size, className}: {size:number, className?:string}) => (
 
 // --- QMS Document Center View with Intelligent Review & Workflow ---
 
+interface Document {
+   id: string;
+   name: string;
+   type: string;
+   content?: string; // Text content for editing/analysis
+   url?: string; // Blob URL for PDF preview
+}
+
 const QMSDocumentView = () => {
    const [activeTab, setActiveTab] = useState<'WORKSPACE' | 'ANALYTICS'>('WORKSPACE');
-   const [selectedDoc, setSelectedDoc] = useState<string | null>('DOC-001');
+   
+   // Initial Mock Documents
+   const initialDocuments: Document[] = [
+      { id: 'ISO-9001', name: 'ISO 9001:2015 Standard', type: 'External', content: "ISO 9001:2015 Requirements..." },
+      { id: 'DOC-001', name: 'Quality Manual v4.0', type: 'Internal', content: "4.1 General Requirements\nThe organization shall establish, document, implement and maintain a quality management system and continually improve its effectiveness in accordance with the requirements of this International Standard.\n\n4.2 Documentation Requirements\n4.2.1 General\nThe quality management system documentation shall include:\na) documented statements of a quality policy and quality objectives,\nb) a quality manual,\nc) documented procedures and records required by this International Standard." },
+      { id: 'SOP-102', name: 'Non-Conformity Control', type: 'SOP', content: "Standard Operating Procedure for Non-Conformity..." },
+      { id: 'WI-005', name: 'Incoming Inspection', type: 'Work Instruction', content: "Work Instruction 005: Steps for incoming inspection..." },
+   ];
+
+   const [documents, setDocuments] = useState<Document[]>(initialDocuments);
+   const [selectedDocId, setSelectedDocId] = useState<string>('DOC-001');
+   const [docContent, setDocContent] = useState<string>(''); // For Textarea
+   const [currentPdfUrl, setCurrentPdfUrl] = useState<string | null>(null); // For PDF Iframe
+   
    const [reviewing, setReviewing] = useState(false);
    const [reviewResult, setReviewResult] = useState<any[] | null>(null);
-   const [docContent, setDocContent] = useState(`4.1 General Requirements\nThe organization shall establish, document, implement and maintain a quality management system and continually improve its effectiveness in accordance with the requirements of this International Standard.\n\n4.2 Documentation Requirements\n4.2.1 General\nThe quality management system documentation shall include:\na) documented statements of a quality policy and quality objectives,\nb) a quality manual,\nc) documented procedures and records required by this International Standard.`);
+   const fileInputRef = useRef<HTMLInputElement>(null);
 
-   const documents = [
-      { id: 'ISO-9001', name: 'ISO 9001:2015 Standard', type: 'External' },
-      { id: 'DOC-001', name: 'Quality Manual v4.0', type: 'Internal' },
-      { id: 'SOP-102', name: 'Non-Conformity Control', type: 'SOP' },
-      { id: 'WI-005', name: 'Incoming Inspection', type: 'Work Instruction' },
-   ];
+   // Sync content when selection changes
+   useEffect(() => {
+      const doc = documents.find(d => d.id === selectedDocId);
+      if (doc) {
+         if (doc.type === 'PDF' && doc.url) {
+            setCurrentPdfUrl(doc.url);
+            setDocContent(''); // Clear text editor for PDF
+         } else {
+            setCurrentPdfUrl(null);
+            setDocContent(doc.content || '');
+         }
+      }
+   }, [selectedDocId, documents]);
+
+   const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const fileType = file.name.split('.').pop()?.toLowerCase();
+      const newDocId = `DOC-${Date.now().toString().slice(-4)}`;
+
+      if (fileType === 'pdf') {
+         const url = URL.createObjectURL(file);
+         const newDoc: Document = {
+            id: newDocId,
+            name: file.name,
+            type: 'PDF',
+            url: url
+         };
+         setDocuments(prev => [...prev, newDoc]);
+         setSelectedDocId(newDocId);
+      } else if (fileType === 'docx' || fileType === 'doc') {
+         const reader = new FileReader();
+         reader.onload = (event) => {
+            const arrayBuffer = event.target?.result as ArrayBuffer;
+            mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+               .then((result) => {
+                  const newDoc: Document = {
+                     id: newDocId,
+                     name: file.name,
+                     type: 'Word',
+                     content: result.value || "[Empty Document]"
+                  };
+                  setDocuments(prev => [...prev, newDoc]);
+                  setSelectedDocId(newDocId);
+               })
+               .catch((err) => {
+                  console.error("Mammoth error:", err);
+                  alert("Error reading Word document.");
+               });
+         };
+         reader.readAsArrayBuffer(file);
+      } else {
+         alert("Unsupported file type. Please upload PDF or Word documents.");
+      }
+      
+      // Reset input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+   };
 
    const workflowSteps = [
      { id: 'SUBMIT', label: '文档提交', actor: '提交人', status: 'completed' },
@@ -849,18 +924,28 @@ const QMSDocumentView = () => {
                   {documents.map(doc => (
                      <div 
                         key={doc.id} 
-                        onClick={() => setSelectedDoc(doc.id)}
+                        onClick={() => setSelectedDocId(doc.id)}
                         className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm ${
-                           selectedDoc === doc.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:bg-slate-800'
+                           selectedDocId === doc.id ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-400 hover:bg-slate-800'
                         }`}
                      >
-                        {doc.type === 'External' ? <BookOpen size={14}/> : <FileText size={14}/>}
+                        {doc.type === 'External' ? <BookOpen size={14}/> : doc.type === 'PDF' ? <FileText size={14} className="text-red-400"/> : <FileText size={14}/>}
                         <div className="flex-1 truncate">{doc.name}</div>
                      </div>
                   ))}
                </div>
                <div className="mt-auto pt-4 border-t border-slate-800">
-                  <button className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2">
+                  <input 
+                     type="file" 
+                     ref={fileInputRef} 
+                     className="hidden" 
+                     accept=".pdf,.docx,.doc"
+                     onChange={handleDocUpload}
+                  />
+                  <button 
+                     onClick={() => fileInputRef.current?.click()}
+                     className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs flex items-center justify-center gap-2"
+                  >
                      <Upload size={14}/> 上传新文档
                   </button>
                </div>
@@ -902,17 +987,32 @@ const QMSDocumentView = () => {
                         <div className="h-10 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4">
                            <span className="text-sm font-medium text-slate-200 flex items-center gap-2">
                               <Edit3 size={14} className="text-emerald-400"/> 
-                              {documents.find(d => d.id === selectedDoc)?.name || 'Editor'}
+                              {documents.find(d => d.id === selectedDocId)?.name || 'Editor'}
                            </span>
                            <div className="flex gap-2">
-                              <button className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><Save size={12}/> 保存</button>
+                              {currentPdfUrl ? (
+                                 <span className="text-xs text-slate-500">Read Only (PDF)</span>
+                              ) : (
+                                 <button className="text-xs text-slate-400 hover:text-white flex items-center gap-1"><Save size={12}/> 保存</button>
+                              )}
                            </div>
                         </div>
-                        <textarea 
-                           className="flex-1 bg-slate-950 p-6 text-sm text-slate-300 leading-relaxed focus:outline-none resize-none font-serif"
-                           value={docContent}
-                           onChange={(e) => setDocContent(e.target.value)}
-                        />
+                        
+                        <div className="flex-1 relative">
+                           {currentPdfUrl ? (
+                              <iframe 
+                                 src={currentPdfUrl} 
+                                 className="w-full h-full border-none" 
+                                 title="PDF Preview"
+                              />
+                           ) : (
+                              <textarea 
+                                 className="w-full h-full bg-slate-950 p-6 text-sm text-slate-300 leading-relaxed focus:outline-none resize-none font-serif"
+                                 value={docContent}
+                                 onChange={(e) => setDocContent(e.target.value)}
+                              />
+                           )}
+                        </div>
                      </div>
 
                      {/* AI Review */}
@@ -933,7 +1033,9 @@ const QMSDocumentView = () => {
                                  ) : (
                                     <>
                                        <Bot size={32} className="opacity-20 mb-2"/>
-                                       <p className="text-xs px-4">点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。</p>
+                                       <p className="text-xs px-4">
+                                          {currentPdfUrl ? "AI 评审仅支持文本模式 (请使用 Word 上传或手动编辑)" : "点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。"}
+                                       </p>
                                     </>
                                  )}
                               </div>
@@ -958,8 +1060,8 @@ const QMSDocumentView = () => {
                         <div className="mt-4 space-y-2">
                            <button 
                               onClick={handleSmartReview}
-                              disabled={reviewing}
-                              className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
+                              disabled={reviewing || !!currentPdfUrl}
+                              className="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-800 disabled:text-slate-600 text-white rounded text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20"
                            >
                               <ScanLine size={14}/> 启动智能评审
                            </button>
