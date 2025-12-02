@@ -18,6 +18,7 @@ import {
 import * as XLSX from 'xlsx';
 import * as mammoth from 'mammoth';
 import * as docx from 'docx-preview';
+import { reviewQMSDocument } from '../../services/geminiService';
 
 // Define the view modes corresponding to AppLayer sub-menus
 type ViewMode = 'DIAGNOSIS' | 'VOC' | 'FORMAT' | 'PREDICTIVE' | 'DOCS';
@@ -768,6 +769,7 @@ interface Document {
    content?: string; // Text content for editing/analysis
    url?: string; // Blob URL for PDF preview
    arrayBuffer?: ArrayBuffer; // For Word docx preview
+   base64?: string; // For PDF AI processing
 }
 
 const QMSDocumentView = () => {
@@ -817,6 +819,8 @@ const QMSDocumentView = () => {
             setCurrentPdfUrl(null);
             setDocContent(doc.content || '');
          }
+         // Clear previous review result when switching docs
+         setReviewResult(null);
       }
    }, [selectedDocId, documents]);
 
@@ -829,14 +833,25 @@ const QMSDocumentView = () => {
 
       if (fileType === 'pdf') {
          const url = URL.createObjectURL(file);
-         const newDoc: Document = {
-            id: newDocId,
-            name: file.name,
-            type: 'PDF',
-            url: url
+         // Read as Base64 for AI processing
+         const reader = new FileReader();
+         reader.onload = (event) => {
+             const result = event.target?.result as string;
+             // Extract base64 part
+             const base64 = result.split(',')[1];
+             
+             const newDoc: Document = {
+                id: newDocId,
+                name: file.name,
+                type: 'PDF',
+                url: url,
+                base64: base64
+             };
+             setDocuments(prev => [...prev, newDoc]);
+             setSelectedDocId(newDocId);
          };
-         setDocuments(prev => [...prev, newDoc]);
-         setSelectedDocId(newDocId);
+         reader.readAsDataURL(file);
+
       } else if (fileType === 'docx' || fileType === 'doc') {
          const reader = new FileReader();
          reader.onload = (event) => {
@@ -892,18 +907,33 @@ const QMSDocumentView = () => {
       { name: '引用失效', value: 25, color: '#8b5cf6' },
    ];
 
-   const handleSmartReview = () => {
+   const handleSmartReview = async () => {
+      if (!selectedDoc) return;
+      
       setReviewing(true);
       setReviewResult(null);
-      // Simulate AI Review
-      setTimeout(() => {
-         setReviewResult([
-            { id: 1, type: 'ambiguity', text: 'Clause 4.1 contains vague language "continually improve".', suggestion: 'Specify metrics for improvement.' },
-            { id: 2, type: 'compliance', text: 'Missing reference to new Risk Management clause (6.1).', suggestion: 'Add section 6.1 regarding risks and opportunities.' },
-            { id: 3, type: 'grammar', text: 'Passive voice detected in 4.2.1.', suggestion: 'Rewrite for active voice.' }
-         ]);
-         setReviewing(false);
-      }, 2000);
+
+      // Determine content source
+      let contentToReview = '';
+      let mimeType: 'text/plain' | 'application/pdf' = 'text/plain';
+
+      if (selectedDoc.type === 'PDF' && selectedDoc.base64) {
+          contentToReview = selectedDoc.base64;
+          mimeType = 'application/pdf';
+      } else if (selectedDoc.content || docContent) {
+          contentToReview = selectedDoc.content || docContent;
+          mimeType = 'text/plain';
+      } else {
+          setReviewing(false);
+          alert("无法获取文档内容进行评审。");
+          return;
+      }
+
+      // Call Real AI Service
+      const issues = await reviewQMSDocument(contentToReview, mimeType);
+      
+      setReviewResult(issues);
+      setReviewing(false);
    };
 
    const handleAutoModify = () => {
@@ -1061,7 +1091,7 @@ const QMSDocumentView = () => {
                                        <RefreshCw size={32} className="animate-spin text-purple-500 mb-2"/>
                                        <p className="text-xs">
                                           {selectedDoc?.type === 'PDF' || selectedDoc?.type === 'Word' 
-                                             ? "AI 视觉引擎正在分析文档内容..." 
+                                             ? "AI 视觉引擎正在分析文档内容 (Compliance Check)..." 
                                              : "正在分析条款合规性..."}
                                        </p>
                                     </>
@@ -1069,7 +1099,7 @@ const QMSDocumentView = () => {
                                     <>
                                        <Bot size={32} className="opacity-20 mb-2"/>
                                        <p className="text-xs px-4">
-                                          点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。支持 PDF, Word 及文本。
+                                          点击下方按钮启动 AI 评审，自动检测不合规项与模糊表达。支持 PDF (多模态) 与 Word 文本。
                                        </p>
                                     </>
                                  )}
@@ -1079,12 +1109,12 @@ const QMSDocumentView = () => {
                                  {reviewResult.map((res, i) => (
                                     <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-lg hover:border-red-500/30 transition-colors">
                                        <div className="flex items-center gap-2 mb-1">
-                                          <AlertTriangle size={12} className="text-amber-400"/>
+                                          <AlertTriangle size={12} className={res.type === 'compliance' ? "text-red-400" : "text-amber-400"}/>
                                           <span className="text-xs font-bold text-slate-300 uppercase">{res.type} Issue</span>
                                        </div>
-                                       <p className="text-xs text-slate-400 mb-2">{res.text}</p>
+                                       <p className="text-xs text-slate-400 mb-2 italic">"{res.text}"</p>
                                        <div className="bg-purple-500/10 border border-purple-500/20 p-2 rounded text-[10px] text-purple-300">
-                                          Suggestion: {res.suggestion}
+                                          建议: {res.suggestion}
                                        </div>
                                     </div>
                                  ))}
