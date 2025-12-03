@@ -23,6 +23,7 @@ const CONTEXT_CONFIG: Record<AppLayer, { title: string; type: string; id: string
   [AppLayer.DESIGN_SIMULATION_CORE]: { title: '涡轮叶片热应力模型', type: 'CAE Model', id: 'SIM-HPT-04', risk: 'High Stress' },
   [AppLayer.DESIGN_BLENDER]: { title: '整机渲染场景', type: '3D Scene', id: 'SCN-RENDER-01' },
   [AppLayer.DESIGN_IMG23D]: { title: '草图输入', type: 'Image Source', id: 'IMG-SKETCH-09' },
+  [AppLayer.DESIGN_COMPARE]: { title: '图纸比对工作区', type: 'Comparison', id: 'CMP-DRAW-001' },
   [AppLayer.DESIGN_SIMULATION]: { title: '设计中心', type: 'Hub', id: 'DES-HUB' },
 
   // Engineering
@@ -65,6 +66,7 @@ const SUGGESTIONS: Record<AppLayer, string[]> = {
   [AppLayer.DESIGN_SIMULATION_CORE]: ['运行结构强度仿真', '优化壁厚参数', '解释应力云图'],
   [AppLayer.DESIGN_BLENDER]: ['渲染一张爆炸图', '调整环境光照'],
   [AppLayer.DESIGN_IMG23D]: ['将草图转换为 3D', '识别特征尺寸'],
+  [AppLayer.DESIGN_COMPARE]: ['对比新旧版本差异', '高亮显示尺寸变更'],
   [AppLayer.DESIGN_SIMULATION]: ['开始新设计任务'],
 
   [AppLayer.ENGINEERING_BOM]: ['检查 BOM 完整性', '查找替代物料', '导出 EBOM'],

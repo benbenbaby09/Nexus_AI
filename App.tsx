@@ -43,6 +43,8 @@ const App: React.FC = () => {
         return <DesignSim viewMode="BLENDER" />;
       case AppLayer.DESIGN_IMG23D:
         return <DesignSim viewMode="IMG_TO_3D" />;
+      case AppLayer.DESIGN_COMPARE:
+        return <DesignSim viewMode="COMPARE" />;
       case AppLayer.DESIGN_SIMULATION: // Fallback
         return <DesignSim viewMode="SIMULATION" />;
 

@@ -56,10 +56,10 @@ const SystemIntro: React.FC<SystemIntroProps> = ({ setLayer }) => {
       {/* Header */}
       <div className="max-w-5xl mx-auto text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
         <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-          Industrial AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Nexus</span>
+          PLM AI <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Nexus</span>
         </h1>
         <p className="text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed">
-          新一代工业智能平台架构概览
+          新一代PLM智能平台架构概览
         </p>
       </div>
 

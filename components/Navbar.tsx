@@ -29,7 +29,8 @@ import {
   Server,
   Share2,
   Code2,
-  TestTube
+  TestTube,
+  Diff
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -72,6 +73,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
         { id: AppLayer.DESIGN_SIMULATION_CORE, label: '设计与仿真', icon: <Activity size={16} /> },
         { id: AppLayer.DESIGN_BLENDER, label: 'Blender Studio', icon: <Box size={16} /> },
         { id: AppLayer.DESIGN_IMG23D, label: '图生 3D', icon: <ImagePlus size={16} /> },
+        { id: AppLayer.DESIGN_COMPARE, label: '图纸比对', icon: <Diff size={16} /> },
       ]
     },
     { 
@@ -149,7 +151,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentLayer, setLayer }) => {
           N
         </div>
         <span className="hidden lg:block font-bold text-lg tracking-tight text-white">
-          Nexus AI
+          PLM Nexus AI
         </span>
       </div>
 

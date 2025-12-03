@@ -28,6 +28,7 @@ const LAYER_CONTEXT: Record<AppLayer, string> = {
   [AppLayer.DESIGN_SIMULATION_CORE]: "用户正在设计与仿真模块，使用代理模型进行快速分析。",
   [AppLayer.DESIGN_BLENDER]: "用户正在 Blender Studio，进行 3D 渲染和评审。",
   [AppLayer.DESIGN_IMG23D]: "用户正在图生 3D 模块，从草图生成三维模型。",
+  [AppLayer.DESIGN_COMPARE]: "用户正在图纸比对模块，对比两版工程图的差异。",
   [AppLayer.DESIGN_SIMULATION]: "用户正在设计与仿真中心。",
 
   // Engineering
@@ -168,5 +169,42 @@ export const chatWithDocument = async (
   } catch (error) {
     console.error("Doc Chat Error:", error);
     return "与文档对话时发生错误，请稍后重试。";
+  }
+};
+
+export const compareDrawings = async (
+  img1Base64: string,
+  img2Base64: string
+): Promise<string> => {
+  try {
+    // Strip header prefix from base64 string if present
+    // data:image/png;base64,iVBORw0KGgo...
+    const cleanData = (data: string) => {
+      if (data.includes('base64,')) {
+        return data.split('base64,')[1];
+      }
+      return data;
+    };
+
+    const parts = [
+      { text: "作为一名资深机械工程师，请对比以下两张技术图纸的局部区域（第一张为基准/旧版，第二张为新版）。\n\n请详细描述选定区域内的视觉差异，例如：\n1. 尺寸标注的变化 (Dimensions)\n2. 形位公差的变更 (GD&T)\n3. 几何特征的增减 (Features)\n4. 表面粗糙度或其他注释的更新\n\n请使用简洁的专业术语回答。" },
+      { inlineData: { mimeType: 'image/png', data: cleanData(img1Base64) } },
+      { text: "Old Version (Base)" },
+      { inlineData: { mimeType: 'image/png', data: cleanData(img2Base64) } },
+      { text: "New Version (Current)" },
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: { parts },
+      config: {
+        temperature: 0.4,
+      }
+    });
+
+    return response.text || "未能识别差异。";
+  } catch (error) {
+    console.error("Drawing Compare Error:", error);
+    return "比对服务暂时不可用，请检查图片大小或网络连接。";
   }
 };

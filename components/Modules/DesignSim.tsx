@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, RotateCcw, Download, Cpu, Layers, FileText, 
   Upload, FileSearch, CheckSquare, AlertOctagon, 
@@ -8,13 +8,15 @@ import {
   Cuboid, Eye, EyeOff, MessageSquare, Image, Video, 
   MonitorPlay, MousePointer2, Palette, Scan, Share2, 
   Box, Maximize, MoreHorizontal, PenTool, ImagePlus,
-  FileOutput, Settings2, RefreshCw, Save
+  FileOutput, Settings2, RefreshCw, Save, Diff, Search, ScanEye,
+  Move, Flame, XCircle
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip
 } from 'recharts';
+import { compareDrawings } from '../../services/geminiService';
 
-type ViewMode = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER' | 'IMG_TO_3D';
+type ViewMode = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER' | 'IMG_TO_3D' | 'COMPARE';
 
 interface DesignSimProps {
   viewMode: ViewMode;
@@ -365,14 +367,11 @@ const SimulationView = () => {
   );
 };
 
-// --- Blender Studio View ---
-
 const BlenderStudioView = () => {
   const [mode, setMode] = useState<'REVIEW' | 'RENDER' | 'CONCEPT'>('REVIEW');
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   
-  // Mock Scene Data
   const parts = [
     { id: 'ASM-001', name: '涡轮总成 (Turbine ASM)', status: 'Released', visible: true },
     { id: 'PRT-102', name: '机匣外壳 (Casing)', status: 'In Work', visible: true },
@@ -395,7 +394,6 @@ const BlenderStudioView = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-full animate-in fade-in duration-500 bg-black border border-slate-800 rounded-xl overflow-hidden">
        
-       {/* Left Sidebar: Scene Graph */}
        <div className="lg:col-span-2 bg-slate-900 border-r border-slate-800 flex flex-col">
           <div className="p-3 border-b border-slate-800 flex justify-between items-center">
              <span className="text-xs font-semibold text-slate-400 uppercase">Scene Collection</span>
@@ -416,7 +414,6 @@ const BlenderStudioView = () => {
                 </div>
              ))}
           </div>
-          {/* Linked Data Preview */}
           <div className="p-3 border-t border-slate-800 bg-slate-950">
              <div className="text-[10px] text-slate-500 uppercase mb-2 font-semibold flex items-center gap-1"><Share2 size={10}/> Windchill Data</div>
              {selectedPart ? (
@@ -433,10 +430,7 @@ const BlenderStudioView = () => {
           </div>
        </div>
 
-       {/* Center: 3D Viewport */}
        <div className="lg:col-span-7 bg-gradient-to-br from-slate-900 via-slate-950 to-black relative group">
-          
-          {/* Viewport Toolbar */}
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-800/80 backdrop-blur rounded-lg border border-slate-700 p-1 flex gap-1 shadow-lg z-10">
              <button className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Select"><MousePointer2 size={16}/></button>
              <button className="p-1.5 hover:bg-slate-700 rounded text-slate-300" title="Move"><Maximize size={16}/></button>
@@ -462,15 +456,12 @@ const BlenderStudioView = () => {
              </button>
           </div>
 
-          {/* 3D Scene Mock */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-             {/* Simple visual representation of engine parts */}
              <div className="relative w-96 h-96 opacity-80 animate-[spin_20s_linear_infinite] hover:pause">
                 <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-[0_0_50px_rgba(59,130,246,0.3)]">
                    <circle cx="100" cy="100" r="80" fill="none" stroke="#334155" strokeWidth="1" strokeDasharray="4 4" />
                    <circle cx="100" cy="100" r="60" fill="none" stroke="#475569" strokeWidth="2" />
                    <circle cx="100" cy="100" r="20" fill="#1e293b" stroke="#94a3b8" strokeWidth="2" />
-                   {/* Blades */}
                    {[...Array(12)].map((_, i) => (
                       <rect 
                         key={i} 
@@ -482,7 +473,6 @@ const BlenderStudioView = () => {
                       />
                    ))}
                 </svg>
-                {/* Annotations Overlay */}
                 {mode === 'REVIEW' && comments.map(c => (
                    <div 
                      key={c.id}
@@ -500,7 +490,6 @@ const BlenderStudioView = () => {
           </div>
        </div>
 
-       {/* Right Sidebar: Context Panel */}
        <div className="lg:col-span-3 bg-slate-900 border-l border-slate-800 p-4 flex flex-col">
           {mode === 'REVIEW' && (
              <>
@@ -606,14 +595,11 @@ const BlenderStudioView = () => {
   );
 };
 
-// --- Image to 3D View ---
-
 const ImageTo3DView = () => {
    const [step, setStep] = useState<'UPLOAD' | 'PROCESSING' | 'RESULT'>('UPLOAD');
    const [uploadedImage, setUploadedImage] = useState<string | null>(null);
    const [processingStage, setProcessingStage] = useState(0); // 0-100
    
-   // Mock Feature Tree
    const features = [
       { id: 'SKETCH_01', type: 'Sketch', name: 'Base Contour' },
       { id: 'EXTRUDE_01', type: 'Extrude', name: 'Boss Extrude', param: '25mm' },
@@ -622,11 +608,9 @@ const ImageTo3DView = () => {
    ];
 
    const handleUpload = () => {
-      // Simulate file upload
-      setUploadedImage('https://images.unsplash.com/photo-1544654067-27b5936720f7?q=80&w=600&auto=format&fit=crop'); // Placeholder sketch image
+      setUploadedImage('https://images.unsplash.com/photo-1544654067-27b5936720f7?q=80&w=600&auto=format&fit=crop'); 
       setStep('PROCESSING');
       
-      // Simulate processing
       let progress = 0;
       const interval = setInterval(() => {
          progress += 5;
@@ -640,8 +624,6 @@ const ImageTo3DView = () => {
 
    return (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full animate-in fade-in duration-500">
-         
-         {/* Left Column: Input & Tree */}
          <div className="lg:col-span-3 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col">
             <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
                <Layers size={18} className="text-orange-400" />
@@ -661,13 +643,11 @@ const ImageTo3DView = () => {
                </div>
             ) : (
                <div className="flex-1 flex flex-col">
-                  {/* Thumbnail */}
                   <div className="h-32 bg-slate-950 rounded-lg mb-4 border border-slate-800 overflow-hidden relative">
                      {uploadedImage && <img src={uploadedImage} className="w-full h-full object-cover opacity-60" />}
                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-center text-slate-400">Source Image</div>
                   </div>
 
-                  {/* Feature Tree */}
                   <div className="flex-1 bg-slate-950 rounded-lg border border-slate-800 p-2 overflow-y-auto">
                      <div className="text-[10px] text-slate-500 uppercase font-bold mb-2 px-2">Parametric History</div>
                      <div className="space-y-1">
@@ -687,9 +667,7 @@ const ImageTo3DView = () => {
             )}
          </div>
 
-         {/* Center Column: Visualization */}
          <div className="lg:col-span-6 bg-black border border-slate-800 rounded-xl relative overflow-hidden flex items-center justify-center">
-             {/* Background Grid */}
              <div className="absolute inset-0 bg-[linear-gradient(rgba(30,41,59,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(30,41,59,0.2)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
              
              {step === 'PROCESSING' && (
@@ -709,13 +687,12 @@ const ImageTo3DView = () => {
 
              {step === 'RESULT' && (
                 <div className="relative w-full h-full flex items-center justify-center z-10">
-                   {/* 3D Representation Placeholder */}
                    <svg viewBox="0 0 400 300" className="w-3/4 h-3/4 drop-shadow-2xl animate-in zoom-in duration-500">
-                      <path d="M100,200 L300,200 L350,150 L150,150 Z" fill="#334155" stroke="#94a3b8" strokeWidth="2" /> {/* Base */}
-                      <path d="M100,200 L100,100 L300,100 L300,200 Z" fill="#475569" stroke="#94a3b8" strokeWidth="2" opacity="0.8" /> {/* Front */}
-                      <path d="M100,100 L150,50 L350,50 L300,100 Z" fill="#64748b" stroke="#94a3b8" strokeWidth="2" /> {/* Top */}
-                      <path d="M300,200 L350,150 L350,50 L300,100 Z" fill="#475569" stroke="#94a3b8" strokeWidth="2" opacity="0.6" /> {/* Side */}
-                      <circle cx="225" cy="125" r="20" fill="#1e293b" stroke="#94a3b8" strokeWidth="2"/> {/* Hole feature */}
+                      <path d="M100,200 L300,200 L350,150 L150,150 Z" fill="#334155" stroke="#94a3b8" strokeWidth="2" />
+                      <path d="M100,200 L100,100 L300,100 L300,200 Z" fill="#475569" stroke="#94a3b8" strokeWidth="2" opacity="0.8" />
+                      <path d="M100,100 L150,50 L350,50 L300,100 Z" fill="#64748b" stroke="#94a3b8" strokeWidth="2" />
+                      <path d="M300,200 L350,150 L350,50 L300,100 Z" fill="#475569" stroke="#94a3b8" strokeWidth="2" opacity="0.6" />
+                      <circle cx="225" cy="125" r="20" fill="#1e293b" stroke="#94a3b8" strokeWidth="2"/>
                    </svg>
                    
                    <div className="absolute bottom-6 flex gap-4">
@@ -726,7 +703,6 @@ const ImageTo3DView = () => {
              )}
          </div>
 
-         {/* Right Column: Actions */}
          <div className="lg:col-span-3 space-y-4">
              {step === 'RESULT' ? (
                 <>
@@ -776,6 +752,381 @@ const ImageTo3DView = () => {
    );
 };
 
+// --- Drawing Compare View ---
+
+const generatePixelDiff = (img1Src: string, img2Src: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const i1 = new window.Image();
+    const i2 = new window.Image();
+    let loaded = 0;
+    const onLoaded = () => {
+      loaded++;
+      if (loaded === 2) {
+        const width = Math.min(i1.width, i2.width);
+        const height = Math.min(i1.height, i2.height);
+        
+        const c1 = document.createElement('canvas');
+        c1.width = width;
+        c1.height = height;
+        const ctx1 = c1.getContext('2d');
+        ctx1?.drawImage(i1, 0, 0, width, height);
+        
+        const c2 = document.createElement('canvas');
+        c2.width = width;
+        c2.height = height;
+        const ctx2 = c2.getContext('2d');
+        ctx2?.drawImage(i2, 0, 0, width, height);
+        
+        if (!ctx1 || !ctx2) return resolve('');
+
+        const d1 = ctx1.getImageData(0, 0, width, height);
+        const d2 = ctx2.getImageData(0, 0, width, height);
+        const output = ctx1.createImageData(width, height);
+        
+        for (let i = 0; i < d1.data.length; i += 4) {
+           const r1 = d1.data[i]; const g1 = d1.data[i+1]; const b1 = d1.data[i+2];
+           const r2 = d2.data[i]; const g2 = d2.data[i+1]; const b2 = d2.data[i+2];
+           
+           const diff = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
+           
+           if (diff > 50) { // Threshold
+              output.data[i] = 255;   // R
+              output.data[i+1] = 0;   // G
+              output.data[i+2] = 0;   // B
+              output.data[i+3] = 255; // Alpha
+           } else {
+              // Dim original for context
+              output.data[i] = r2;
+              output.data[i+1] = g2;
+              output.data[i+2] = b2;
+              output.data[i+3] = 40; // Low Alpha for non-diff
+           }
+        }
+        
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = width;
+        outCanvas.height = height;
+        outCanvas.getContext('2d')?.putImageData(output, 0, 0);
+        resolve(outCanvas.toDataURL());
+      }
+    };
+    i1.crossOrigin = "Anonymous"; i1.src = img1Src; i1.onload = onLoaded;
+    i2.crossOrigin = "Anonymous"; i2.src = img2Src; i2.onload = onLoaded;
+  });
+};
+
+const DrawingCompareView = () => {
+  const [img1, setImg1] = useState<string | null>(null);
+  const [img2, setImg2] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  
+  // Selection State
+  const [isSelecting, setIsSelecting] = useState(false);
+  // Using pixels relative to the display container to ensure synchronization
+  const [selection, setSelection] = useState<{x: number, y: number, w: number, h: number} | null>(null);
+  const startPos = useRef<{x: number, y: number} | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const img2Ref = useRef<HTMLImageElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, target: 'img1' | 'img2') => {
+    const file = e.target.files?.[0];
+    if (file) readFile(file, target);
+  };
+
+  const readFile = (file: File, target: 'img1' | 'img2') => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (target === 'img1') setImg1(evt.target?.result as string);
+      else setImg2(evt.target?.result as string);
+      // Reset logic
+      setHeatmapUrl(null);
+      setShowHeatmap(false);
+      setResult(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent, target: 'img1' | 'img2') => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) readFile(file, target);
+  };
+
+  const handleGenerateHeatmap = async () => {
+    if (showHeatmap) {
+       setShowHeatmap(false);
+       return;
+    }
+    if (!img1 || !img2) return;
+    
+    // Basic caching optimization: if urls haven't changed, reuse heatmapUrl? 
+    // For now, always regenerate to ensure accuracy if images changed.
+    const url = await generatePixelDiff(img1, img2);
+    setHeatmapUrl(url);
+    setShowHeatmap(true);
+  };
+
+  // Mouse Handlers for Drawing Selection Box
+  // Updated to allow drawing on EITHER container
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!img1 || !img2) return; // Only allow selection if both images present
+    setIsSelecting(true);
+    // Get coordinates relative to the image container
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    startPos.current = { x, y };
+    setSelection({ x, y, w: 0, h: 0 });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isSelecting || !startPos.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+    
+    setSelection({
+      x: Math.min(currentX, startPos.current.x),
+      y: Math.min(currentY, startPos.current.y),
+      w: Math.abs(currentX - startPos.current.x),
+      h: Math.abs(currentY - startPos.current.y)
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsSelecting(false);
+    startPos.current = null;
+  };
+
+  const cropImage = async (imgSrc: string, sel: {x: number, y: number, w: number, h: number}, displayWidth: number, displayHeight: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+            const canvas = document.createElement('canvas');
+            const scaleX = img.naturalWidth / displayWidth;
+            const scaleY = img.naturalHeight / displayHeight;
+
+            canvas.width = sel.w * scaleX;
+            canvas.height = sel.h * scaleY;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(
+                img, 
+                sel.x * scaleX, sel.y * scaleY, sel.w * scaleX, sel.h * scaleY, 
+                0, 0, canvas.width, canvas.height
+              );
+              resolve(canvas.toDataURL('image/png'));
+            } else {
+                reject(new Error("Canvas context is null"));
+            }
+        } catch (e) {
+            reject(e);
+        }
+      };
+      img.onerror = (e) => reject(new Error("Image failed to load: " + imgSrc.substring(0, 50)));
+      img.src = imgSrc;
+    });
+  };
+
+  const handleCompare = async () => {
+    if (!img1 || !img2 || !selection || selection.w < 10 || selection.h < 10) {
+      alert("请先上传两张图纸并框选对比区域。");
+      return;
+    }
+    
+    setIsAnalyzing(true);
+    setResult(null);
+
+    // Use dimensions of img2 container/image for scale calculation
+    const displayWidth = img2Ref.current?.clientWidth || 1;
+    const displayHeight = img2Ref.current?.clientHeight || 1;
+
+    try {
+      const cropped1 = await cropImage(img1, selection, displayWidth, displayHeight);
+      const cropped2 = await cropImage(img2, selection, displayWidth, displayHeight);
+
+      const aiAnalysis = await compareDrawings(cropped1, cropped2);
+      setResult(aiAnalysis);
+    } catch (err: any) {
+      console.error(err);
+      setResult("发生错误，无法完成比对: " + (err.message || String(err)));
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 grid-rows-[auto_1fr] gap-6 h-full animate-in fade-in duration-500">
+      
+      {/* Top Toolbar */}
+      <div className="lg:col-span-12 bg-slate-900/50 border border-slate-800 rounded-xl p-4 flex justify-between items-center">
+         <div className="flex gap-4 items-center">
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] text-slate-500 uppercase font-bold">Files</span>
+               <div className="h-4 w-px bg-slate-700 mx-2"></div>
+               <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded text-xs transition-colors border border-slate-700 flex items-center gap-2">
+                  <Upload size={12}/> Upload Base
+                  <input type="file" className="hidden" onChange={(e) => handleFileChange(e, 'img1')} />
+               </label>
+               <label className="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded text-xs transition-colors border border-slate-700 flex items-center gap-2">
+                  <Upload size={12}/> Upload New
+                  <input type="file" className="hidden" onChange={(e) => handleFileChange(e, 'img2')} />
+               </label>
+            </div>
+         </div>
+         <div className="flex gap-3">
+            <button
+               onClick={handleGenerateHeatmap}
+               disabled={!img1 || !img2}
+               className={`px-3 py-1.5 rounded text-xs flex items-center gap-2 transition-colors border ${
+                  showHeatmap ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+               }`}
+            >
+               {showHeatmap ? <XCircle size={14}/> : <Flame size={14}/>}
+               {showHeatmap ? 'Hide Heatmap' : 'Show Diff Heatmap'}
+            </button>
+            <button 
+               onClick={handleCompare}
+               disabled={isAnalyzing || !img1 || !img2}
+               className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white text-xs rounded flex items-center gap-2 transition-colors shadow-lg shadow-indigo-500/20 font-medium"
+            >
+               {isAnalyzing ? <RefreshCw className="animate-spin" size={14} /> : <ScanEye size={14} />}
+               AI Analyze Region
+            </button>
+         </div>
+      </div>
+
+      {/* Main Viewport - Side by Side */}
+      <div className="lg:col-span-8 grid grid-cols-2 gap-4 h-full min-h-0">
+         {/* Base Image (Reference) */}
+         <div 
+            className="bg-black border border-slate-800 rounded-xl relative overflow-hidden flex items-center justify-center group cursor-crosshair select-none"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, 'img1')}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+         >
+            {!img1 ? (
+               <div className="text-slate-600 text-sm flex flex-col items-center gap-2 border-2 border-dashed border-slate-800 p-8 rounded-lg pointer-events-none">
+                  <Upload size={24} className="opacity-50"/>
+                  <span>Drop Base Drawing Here</span>
+               </div>
+            ) : (
+               <>
+                  <img src={img1} alt="Base" className="max-w-full max-h-full object-contain opacity-80 pointer-events-none" />
+                  {/* Synchronized Selection Overlay */}
+                  {selection && (
+                     <div 
+                        className="absolute border-2 border-yellow-400 bg-yellow-400/10 pointer-events-none"
+                        style={{ 
+                           left: selection.x, 
+                           top: selection.y, 
+                           width: selection.w, 
+                           height: selection.h 
+                        }}
+                     >
+                     </div>
+                  )}
+               </>
+            )}
+            <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] text-slate-300 font-mono pointer-events-none">Reference (Before)</div>
+         </div>
+
+         {/* New Image (Comparison) / Interaction Layer */}
+         <div 
+            className="bg-black border border-slate-800 rounded-xl relative overflow-hidden flex items-center justify-center cursor-crosshair group select-none"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => handleDrop(e, 'img2')}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            ref={containerRef}
+         >
+            {!img2 ? (
+               <div className="text-slate-600 text-sm flex flex-col items-center gap-2 border-2 border-dashed border-slate-800 p-8 rounded-lg pointer-events-none">
+                  <Upload size={24} className="opacity-50"/>
+                  <span>Drop Comparison Drawing Here</span>
+               </div>
+            ) : (
+               <>
+                  <img 
+                     ref={img2Ref} 
+                     src={showHeatmap && heatmapUrl ? heatmapUrl : img2} 
+                     alt="New" 
+                     className="max-w-full max-h-full object-contain pointer-events-none" 
+                  />
+                  {/* Selection Overlay */}
+                  {selection && (
+                     <div 
+                        className="absolute border-2 border-yellow-400 bg-yellow-400/20 pointer-events-none"
+                        style={{ 
+                           left: selection.x, 
+                           top: selection.y, 
+                           width: selection.w, 
+                           height: selection.h 
+                        }}
+                     >
+                        <div className="absolute -top-6 left-0 bg-yellow-400 text-black text-[10px] px-1 font-bold rounded shadow-sm">ROI Selected</div>
+                     </div>
+                  )}
+               </>
+            )}
+            <div className="absolute top-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] text-slate-300 font-mono flex items-center gap-2 pointer-events-none">
+               Comparison (After) 
+               {showHeatmap && <span className="text-red-400 flex items-center gap-1 text-[9px]"><Flame size={8}/> Heatmap Mode</span>}
+            </div>
+         </div>
+      </div>
+
+      {/* Right Sidebar: Result */}
+      <div className="lg:col-span-4 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col overflow-hidden h-full">
+         <h3 className="font-semibold text-white mb-4 flex items-center gap-2 shrink-0">
+            <Diff size={18} className="text-emerald-400" />
+            AI 差异分析报告
+         </h3>
+         
+         <div className="flex-1 overflow-y-auto bg-slate-950 rounded-lg border border-slate-800 p-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+            {isAnalyzing ? (
+               <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
+                  <Search size={32} className="animate-bounce opacity-20"/>
+                  <p className="text-xs">正在进行像素级比对与语义分析...</p>
+               </div>
+            ) : result ? (
+               <div className="prose prose-invert prose-sm">
+                  <div className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
+                     {result}
+                  </div>
+               </div>
+            ) : (
+               <div className="text-center text-slate-600 mt-10">
+                  <p className="text-xs">请上传两张图纸，并框选区域以开始分析。</p>
+                  <div className="mt-4 p-4 border border-slate-800 border-dashed rounded-lg bg-slate-900/50">
+                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                        <Move size={12}/> 操作指南
+                     </div>
+                     <ul className="text-left text-[10px] text-slate-500 list-disc pl-4 space-y-1">
+                        <li>支持拖拽上传图片</li>
+                        <li>点击 "Show Diff Heatmap" 查看全局差异</li>
+                        <li>在任意图纸上框选区域，双向同步选框</li>
+                     </ul>
+                  </div>
+               </div>
+            )}
+         </div>
+      </div>
+
+    </div>
+  );
+};
+
 const DesignSim: React.FC<DesignSimProps> = ({ viewMode }) => {
   // --- Render Header Logic ---
   const renderHeader = () => {
@@ -799,6 +1150,10 @@ const DesignSim: React.FC<DesignSimProps> = ({ viewMode }) => {
         title = "图生 3D (Image to Mesh)";
         icon = <ImagePlus className="text-emerald-400" />;
         desc = "基于草图或照片快速生成参数化 3D 模型。";
+     } else if (viewMode === 'COMPARE') {
+        title = "智能图纸比对";
+        icon = <Diff className="text-amber-400" />;
+        desc = "基于视觉大模型的工程图纸差异自动识别。";
      }
 
      return (
@@ -823,6 +1178,7 @@ const DesignSim: React.FC<DesignSimProps> = ({ viewMode }) => {
          {viewMode === 'SIMULATION' && <SimulationView />}
          {viewMode === 'BLENDER' && <BlenderStudioView />}
          {viewMode === 'IMG_TO_3D' && <ImageTo3DView />}
+         {viewMode === 'COMPARE' && <DrawingCompareView />}
       </div>
     </div>
   );
