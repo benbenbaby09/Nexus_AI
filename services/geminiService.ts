@@ -208,3 +208,53 @@ export const compareDrawings = async (
     return "比对服务暂时不可用，请检查图片大小或网络连接。";
   }
 };
+
+export const extractDrawingParameters = async (
+  imgBase64: string
+): Promise<any[]> => {
+  try {
+    const cleanData = (data: string) => {
+      if (data.includes('base64,')) {
+        return data.split('base64,')[1];
+      }
+      return data;
+    };
+
+    const parts = [
+      { inlineData: { mimeType: 'image/png', data: cleanData(imgBase64) } },
+      { text: "Extract all technical parameters visible in this engineering drawing (dimensions, tolerances, surface finish, material specs, notes). Return a clean list." }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              category: { 
+                type: Type.STRING, 
+                enum: ["Dimension", "Geometric Tolerance", "Surface Finish", "Note", "Material", "Title Block"], 
+                description: "Type of parameter" 
+              },
+              value: { type: Type.STRING, description: "The value or content text" },
+              location: { type: Type.STRING, description: "Rough location description if applicable, e.g. 'Top Left'" }
+            },
+            required: ["category", "value"]
+          }
+        }
+      }
+    });
+
+    if (response.text) {
+      return JSON.parse(response.text);
+    }
+    return [];
+  } catch (error) {
+    console.error("Extract Params Error:", error);
+    return [{ category: "Error", value: "Failed to extract parameters. Please try a smaller region or check network connection.", location: "System" }];
+  }
+};

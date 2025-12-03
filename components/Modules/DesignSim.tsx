@@ -9,12 +9,12 @@ import {
   MonitorPlay, MousePointer2, Palette, Scan, Share2, 
   Box, Maximize, MoreHorizontal, PenTool, ImagePlus,
   FileOutput, Settings2, RefreshCw, Save, Diff, Search, ScanEye,
-  Move, Flame, XCircle
+  Move, Flame, XCircle, FileJson, Table
 } from 'lucide-react';
 import { 
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip
 } from 'recharts';
-import { compareDrawings } from '../../services/geminiService';
+import { compareDrawings, extractDrawingParameters } from '../../services/geminiService';
 
 type ViewMode = 'REQUIREMENTS' | 'SIMULATION' | 'BLENDER' | 'IMG_TO_3D' | 'COMPARE';
 
@@ -823,6 +823,11 @@ const DrawingCompareView = () => {
   const [heatmapUrl, setHeatmapUrl] = useState<string | null>(null);
   const [showHeatmap, setShowHeatmap] = useState(false);
   
+  // Parameter Extraction State
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractedParams, setExtractedParams] = useState<any[] | null>(null);
+  const [sidebarMode, setSidebarMode] = useState<'DIFF' | 'PARAMS'>('DIFF');
+
   // Selection State
   const [isSelecting, setIsSelecting] = useState(false);
   // Using pixels relative to the display container to ensure synchronization
@@ -845,6 +850,7 @@ const DrawingCompareView = () => {
       setHeatmapUrl(null);
       setShowHeatmap(false);
       setResult(null);
+      setExtractedParams(null);
     };
     reader.readAsDataURL(file);
   };
@@ -939,6 +945,7 @@ const DrawingCompareView = () => {
       return;
     }
     
+    setSidebarMode('DIFF');
     setIsAnalyzing(true);
     setResult(null);
 
@@ -957,6 +964,38 @@ const DrawingCompareView = () => {
       setResult("发生错误，无法完成比对: " + (err.message || String(err)));
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleExtractParameters = async () => {
+    if (!img2) {
+      alert("请先上传图纸 (Comparison Drawing)。");
+      return;
+    }
+
+    setSidebarMode('PARAMS');
+    setIsExtracting(true);
+    setExtractedParams(null);
+
+    try {
+      // Send the entire img2 or just crop if a selection exists? 
+      // User likely wants full drawing parameters, or specific region. 
+      // If selection exists, use it. Otherwise use full image.
+      let imageToSend = img2;
+      
+      if (selection && selection.w > 10 && selection.h > 10) {
+         const displayWidth = img2Ref.current?.clientWidth || 1;
+         const displayHeight = img2Ref.current?.clientHeight || 1;
+         imageToSend = await cropImage(img2, selection, displayWidth, displayHeight);
+      }
+
+      const params = await extractDrawingParameters(imageToSend);
+      setExtractedParams(params);
+    } catch (err: any) {
+      console.error(err);
+      alert("Extraction failed: " + err.message);
+    } finally {
+      setIsExtracting(false);
     }
   };
 
@@ -990,6 +1029,18 @@ const DrawingCompareView = () => {
                {showHeatmap ? <XCircle size={14}/> : <Flame size={14}/>}
                {showHeatmap ? 'Hide Heatmap' : 'Show Diff Heatmap'}
             </button>
+            
+            <div className="w-px h-6 bg-slate-700 mx-1"></div>
+
+            <button 
+               onClick={handleExtractParameters}
+               disabled={isExtracting || !img2}
+               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs flex items-center gap-2 transition-colors"
+            >
+               {isExtracting ? <RefreshCw className="animate-spin" size={14} /> : <FileJson size={14} />}
+               Extract Parameters
+            </button>
+
             <button 
                onClick={handleCompare}
                disabled={isAnalyzing || !img1 || !img2}
@@ -1087,38 +1138,89 @@ const DrawingCompareView = () => {
       </div>
 
       {/* Right Sidebar: Result */}
-      <div className="lg:col-span-4 bg-slate-900/50 border border-slate-800 rounded-xl p-5 flex flex-col overflow-hidden h-full">
-         <h3 className="font-semibold text-white mb-4 flex items-center gap-2 shrink-0">
-            <Diff size={18} className="text-emerald-400" />
-            AI 差异分析报告
-         </h3>
+      <div className="lg:col-span-4 bg-slate-900/50 border border-slate-800 rounded-xl flex flex-col overflow-hidden h-full">
+         {/* Sidebar Tabs */}
+         <div className="flex border-b border-slate-800">
+            <button 
+               onClick={() => setSidebarMode('DIFF')}
+               className={`flex-1 py-3 text-xs font-medium text-center transition-colors ${
+                  sidebarMode === 'DIFF' ? 'text-emerald-400 border-b-2 border-emerald-500 bg-slate-900' : 'text-slate-500 hover:text-slate-300'
+               }`}
+            >
+               <div className="flex items-center justify-center gap-2"><Diff size={14}/> 差异分析</div>
+            </button>
+            <button 
+               onClick={() => setSidebarMode('PARAMS')}
+               className={`flex-1 py-3 text-xs font-medium text-center transition-colors ${
+                  sidebarMode === 'PARAMS' ? 'text-blue-400 border-b-2 border-blue-500 bg-slate-900' : 'text-slate-500 hover:text-slate-300'
+               }`}
+            >
+               <div className="flex items-center justify-center gap-2"><Table size={14}/> 参数提取</div>
+            </button>
+         </div>
          
-         <div className="flex-1 overflow-y-auto bg-slate-950 rounded-lg border border-slate-800 p-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-            {isAnalyzing ? (
-               <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
-                  <Search size={32} className="animate-bounce opacity-20"/>
-                  <p className="text-xs">正在进行像素级比对与语义分析...</p>
-               </div>
-            ) : result ? (
-               <div className="prose prose-invert prose-sm">
-                  <div className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
-                     {result}
-                  </div>
-               </div>
-            ) : (
-               <div className="text-center text-slate-600 mt-10">
-                  <p className="text-xs">请上传两张图纸，并框选区域以开始分析。</p>
-                  <div className="mt-4 p-4 border border-slate-800 border-dashed rounded-lg bg-slate-900/50">
-                     <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-                        <Move size={12}/> 操作指南
+         <div className="flex-1 overflow-y-auto bg-slate-950 p-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent relative">
+            {sidebarMode === 'DIFF' ? (
+               <>
+                  {isAnalyzing ? (
+                     <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
+                        <Search size={32} className="animate-bounce opacity-20"/>
+                        <p className="text-xs">正在进行像素级比对与语义分析...</p>
                      </div>
-                     <ul className="text-left text-[10px] text-slate-500 list-disc pl-4 space-y-1">
-                        <li>支持拖拽上传图片</li>
-                        <li>点击 "Show Diff Heatmap" 查看全局差异</li>
-                        <li>在任意图纸上框选区域，双向同步选框</li>
-                     </ul>
-                  </div>
-               </div>
+                  ) : result ? (
+                     <div className="prose prose-invert prose-sm">
+                        <div className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">
+                           {result}
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="text-center text-slate-600 mt-10">
+                        <p className="text-xs">请上传两张图纸，并框选区域以开始分析。</p>
+                        <div className="mt-4 p-4 border border-slate-800 border-dashed rounded-lg bg-slate-900/50">
+                           <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
+                              <Move size={12}/> 操作指南
+                           </div>
+                           <ul className="text-left text-[10px] text-slate-500 list-disc pl-4 space-y-1">
+                              <li>支持拖拽上传图片</li>
+                              <li>点击 "Show Diff Heatmap" 查看全局差异</li>
+                              <li>在任意图纸上框选区域，双向同步选框</li>
+                           </ul>
+                        </div>
+                     </div>
+                  )}
+               </>
+            ) : (
+               <>
+                  {isExtracting ? (
+                     <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
+                        <FileJson size={32} className="animate-bounce opacity-20"/>
+                        <p className="text-xs">正在OCR识别并结构化提取参数...</p>
+                     </div>
+                  ) : extractedParams ? (
+                     <div className="space-y-4 animate-in slide-in-from-right-4">
+                        <div className="flex justify-between items-center">
+                           <h4 className="text-xs font-semibold text-slate-400 uppercase">提取结果 ({extractedParams.length})</h4>
+                           <button className="text-[10px] text-blue-400 hover:text-blue-300">Copy JSON</button>
+                        </div>
+                        <div className="space-y-2">
+                           {extractedParams.map((param, i) => (
+                              <div key={i} className="p-3 bg-slate-900 border border-slate-800 rounded-lg hover:border-blue-500/30 transition-colors">
+                                 <div className="flex justify-between items-start mb-1">
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded border bg-slate-800 border-slate-700 text-slate-400">{param.category}</span>
+                                    {param.location && <span className="text-[10px] text-slate-600">{param.location}</span>}
+                                 </div>
+                                 <div className="text-sm font-medium text-slate-200 mt-1">{param.value}</div>
+                              </div>
+                           ))}
+                        </div>
+                     </div>
+                  ) : (
+                     <div className="text-center text-slate-600 mt-10">
+                        <p className="text-xs">点击上方 "Extract Parameters" 按钮</p>
+                        <p className="text-[10px] mt-1">AI 将自动识别尺寸、公差、材质等信息</p>
+                     </div>
+                  )}
+               </>
             )}
          </div>
       </div>
