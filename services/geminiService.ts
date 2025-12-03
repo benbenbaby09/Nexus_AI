@@ -227,7 +227,7 @@ export const extractDrawingParameters = async (
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
-      contents: [{ role: 'user', parts }],
+      contents: { parts },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -235,15 +235,10 @@ export const extractDrawingParameters = async (
           items: {
             type: Type.OBJECT,
             properties: {
-              category: { 
-                type: Type.STRING, 
-                enum: ["Dimension", "Geometric Tolerance", "Surface Finish", "Note", "Material", "Title Block"], 
-                description: "Type of parameter" 
-              },
+              category: { type: Type.STRING, enum: ["Dimension", "Geometric Tolerance", "Surface Finish", "Note", "Material", "Title Block"], description: "Type of parameter" },
               value: { type: Type.STRING, description: "The value or content text" },
               location: { type: Type.STRING, description: "Rough location description if applicable, e.g. 'Top Left'" }
-            },
-            required: ["category", "value"]
+            }
           }
         }
       }
@@ -255,6 +250,6 @@ export const extractDrawingParameters = async (
     return [];
   } catch (error) {
     console.error("Extract Params Error:", error);
-    return [{ category: "Error", value: "Failed to extract parameters. Please try a smaller region or check network connection.", location: "System" }];
+    return [];
   }
 };

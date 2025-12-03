@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserPersona } from '../types';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -9,7 +9,8 @@ import {
   Clock, CheckCircle2, AlertTriangle, FileText, ArrowRight, 
   Cpu, Zap, BookOpen, GitPullRequest, Activity, Terminal, 
   Server, Bug, Play, ShieldCheck, Share2, Search, Database, 
-  Code, AlertOctagon, RefreshCw, Hexagon, Layers, Wind, Workflow
+  Code, AlertOctagon, RefreshCw, Hexagon, Layers, Wind, Workflow,
+  X, Settings2, Scale, Microscope, Check, ChevronRight, Box
 } from 'lucide-react';
 
 interface WorkbenchProps {
@@ -53,6 +54,11 @@ const StatusBadge = ({ status }: { status: string }) => {
 // --- Designer View ---
 
 const DesignerDashboard = () => {
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardStep, setWizardStep] = useState<'CONFIG' | 'PROCESSING' | 'RESULTS'>('CONFIG');
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState<number | null>(null);
+
   const tasks = [
     { id: 'T-101', title: '起落架液压支柱 CAD 修改', type: 'Design', deadline: '今天 14:00' },
     { id: 'T-102', title: '机翼前缘复合材料模型审核', type: 'Review', deadline: '明天' },
@@ -65,8 +71,253 @@ const DesignerDashboard = () => {
     { id: 'SIM-003', name: '热模态分析', progress: 100, status: 'Completed' },
   ];
 
+  const handleStartGeneration = () => {
+    setWizardStep('PROCESSING');
+    setProcessingProgress(0);
+    const interval = setInterval(() => {
+      setProcessingProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setWizardStep('RESULTS');
+          return 100;
+        }
+        return prev + 2; // Speed of simulation
+      });
+    }, 50);
+  };
+
+  const generatedVariants = [
+    { id: 1, name: 'Organic Topology', weight: '-32%', stress: '420 MPa', cost: '$$$', type: 'Additive', imgPath: 'M10,90 Q50,10 90,90 T170,90' },
+    { id: 2, name: 'Lattice Structure', weight: '-45%', stress: '480 MPa', cost: '$$$$', type: 'Additive', imgPath: 'M10,90 L50,20 L90,90 L130,20 L170,90' },
+    { id: 3, name: 'Hybrid Frame', weight: '-18%', stress: '380 MPa', cost: '$', type: 'CNC', imgPath: 'M10,90 H170 V40 H10 Z' },
+  ];
+
+  const handleCloseWizard = () => {
+    setShowWizard(false);
+    setWizardStep('CONFIG');
+    setProcessingProgress(0);
+    setSelectedVariant(null);
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 relative">
+      
+      {/* Wizard Modal */}
+      {showWizard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Hexagon className="text-indigo-500" /> AI 生成式设计向导
+                </h2>
+                <p className="text-sm text-slate-400">Generative Design Studio</p>
+              </div>
+              <button onClick={handleCloseWizard} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8">
+              
+              {/* Step 1: Configuration */}
+              {wizardStep === 'CONFIG' && (
+                <div className="space-y-8 animate-in slide-in-from-right-4">
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-300 block mb-2">设计目标描述</label>
+                        <textarea 
+                          className="w-full h-32 bg-slate-950 border border-slate-700 rounded-xl p-4 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none"
+                          placeholder="例如：优化发动机支架结构，在保持刚度的前提下减轻重量，需避开线束通道..."
+                          defaultValue="优化涡轮叶片冷却通道结构，最大化散热效率，同时满足离心力结构强度要求。"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-300 block mb-2">制造工艺约束</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button className="p-3 bg-indigo-600/20 border border-indigo-500 text-indigo-300 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                            <Layers size={16}/> 增材制造 (3D Print)
+                          </button>
+                          <button className="p-3 bg-slate-950 border border-slate-700 text-slate-400 rounded-lg text-sm font-medium hover:border-slate-600 transition-colors">
+                            <Box size={16}/> 减材制造 (CNC)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      <div className="bg-slate-950/50 p-5 rounded-xl border border-slate-800">
+                        <h4 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+                          <Settings2 size={16} className="text-slate-400"/> 边界参数
+                        </h4>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex justify-between text-xs text-slate-400 mb-1">
+                              <span>目标安全系数</span>
+                              <span className="text-white">1.5</span>
+                            </div>
+                            <input type="range" className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500" min="1" max="3" step="0.1" defaultValue="1.5"/>
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-xs text-slate-400 mb-1">
+                              <span>材料</span>
+                              <span className="text-white">Ti-6Al-4V (Grade 5)</span>
+                            </div>
+                            <select className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-300 outline-none">
+                              <option>Ti-6Al-4V (Grade 5)</option>
+                              <option>Inconel 718</option>
+                              <option>Aluminum 7075-T6</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Processing */}
+              {wizardStep === 'PROCESSING' && (
+                <div className="flex flex-col items-center justify-center h-full py-12 animate-in zoom-in-95">
+                  <div className="relative w-48 h-48 mb-8">
+                    <svg className="w-full h-full animate-spin-slow" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" strokeWidth="4"/>
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="#6366f1" strokeWidth="4" strokeDasharray="280" strokeDashoffset={280 - (280 * processingProgress) / 100} strokeLinecap="round"/>
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl font-bold text-white">
+                      {processingProgress}%
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    {processingProgress < 30 ? '初始化体素网格 (Voxelizing)...' : 
+                     processingProgress < 70 ? '拓扑优化迭代 (Iterating)...' : 
+                     '验证结构完整性 (Validating)...'}
+                  </h3>
+                  <p className="text-slate-400 text-sm">AI 正在探索数千种设计可能性...</p>
+                  
+                  {/* Real-time Log Simulation */}
+                  <div className="mt-8 w-full max-w-lg bg-slate-950 rounded-lg border border-slate-800 p-4 font-mono text-xs text-slate-500 h-32 overflow-hidden relative">
+                    <div className="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-slate-950 to-transparent"></div>
+                    <div className="space-y-1">
+                      <div>[INFO] Loading load cases: Centrifugal + Thermal</div>
+                      <div>[INFO] Material defined: Ti-6Al-4V (E=113.8 GPa)</div>
+                      {processingProgress > 20 && <div>[PROC] Iteration 12: Mass -5%, Stiffness +2%</div>}
+                      {processingProgress > 40 && <div>[PROC] Iteration 45: Mass -15%, Stiffness +0.5%</div>}
+                      {processingProgress > 60 && <div>[PROC] Iteration 88: Converging topology...</div>}
+                      {processingProgress > 80 && <div className="text-emerald-500">[SUCC] Validation passed. Safety Factor: 1.52</div>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Results */}
+              {wizardStep === 'RESULTS' && (
+                <div className="animate-in slide-in-from-right-4">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-medium text-white">生成结果 (3 Variants)</h3>
+                    <div className="flex gap-4 text-sm">
+                      <span className="text-slate-400">基准重量: <span className="text-white">2.4 kg</span></span>
+                      <span className="text-slate-400">基准应力: <span className="text-white">350 MPa</span></span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-6">
+                    {generatedVariants.map((variant) => (
+                      <div 
+                        key={variant.id}
+                        onClick={() => setSelectedVariant(variant.id)}
+                        className={`group relative bg-slate-950 border rounded-xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] ${
+                          selectedVariant === variant.id ? 'border-indigo-500 ring-1 ring-indigo-500/50' : 'border-slate-800 hover:border-slate-600'
+                        }`}
+                      >
+                        {/* Visual Placeholder */}
+                        <div className="h-40 bg-slate-900 relative flex items-center justify-center overflow-hidden">
+                          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 to-slate-950 opacity-50"></div>
+                          <svg viewBox="0 0 200 100" className="w-3/4 h-3/4 drop-shadow-2xl">
+                             <path d={variant.imgPath} fill="none" stroke={selectedVariant === variant.id ? '#818cf8' : '#cbd5e1'} strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" className="transition-colors"/>
+                          </svg>
+                          <div className="absolute top-2 right-2 bg-slate-900/80 px-2 py-1 rounded text-[10px] text-slate-300 backdrop-blur border border-slate-700">
+                            {variant.type}
+                          </div>
+                        </div>
+
+                        {/* Metrics */}
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <h4 className={`font-semibold ${selectedVariant === variant.id ? 'text-indigo-400' : 'text-slate-200'}`}>{variant.name}</h4>
+                            {selectedVariant === variant.id && <CheckCircle2 size={18} className="text-indigo-500"/>}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
+                            <div>
+                              <div className="text-xs text-slate-500 mb-0.5">减重</div>
+                              <div className="text-emerald-400 font-bold">{variant.weight}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-500 mb-0.5">最大应力</div>
+                              <div className={parseInt(variant.stress) > 450 ? 'text-amber-400' : 'text-slate-200'}>{variant.stress}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-500 mb-0.5">制造成本</div>
+                              <div className="text-slate-300">{variant.cost}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-slate-500 mb-0.5">AI 评分</div>
+                              <div className="text-indigo-400 font-bold">{(9.5 - variant.id * 0.5).toFixed(1)}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Controls */}
+            <div className="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-between items-center rounded-b-2xl">
+              {wizardStep === 'CONFIG' && (
+                <>
+                  <button onClick={handleCloseWizard} className="text-slate-400 hover:text-white text-sm font-medium">取消</button>
+                  <button 
+                    onClick={handleStartGeneration}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/20"
+                  >
+                    <Zap size={18} /> 开始生成
+                  </button>
+                </>
+              )}
+              {wizardStep === 'PROCESSING' && (
+                <div className="w-full flex justify-center text-sm text-slate-500">
+                  请稍候，计算大约需要几秒钟...
+                </div>
+              )}
+              {wizardStep === 'RESULTS' && (
+                <>
+                  <button onClick={() => setWizardStep('CONFIG')} className="text-slate-400 hover:text-white text-sm font-medium">返回修改参数</button>
+                  <div className="flex gap-3">
+                    <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium">
+                      导出报告
+                    </button>
+                    <button 
+                      onClick={handleCloseWizard}
+                      disabled={!selectedVariant}
+                      className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500 text-white px-6 py-2.5 rounded-lg font-medium flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-colors"
+                    >
+                      <Check size={18} /> 采用此方案
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Gen Design Banner */}
       <div className="relative overflow-hidden rounded-xl border border-indigo-500/30 bg-gradient-to-r from-indigo-900/40 to-slate-900 p-8">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-indigo-500/20 blur-3xl rounded-full pointer-events-none"></div>
@@ -79,7 +330,10 @@ const DesignerDashboard = () => {
               基于当前项目上下文（涡轮引擎组件），AI 已为您预填充了边界条件和材料参数。
             </p>
           </div>
-          <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-transform hover:scale-105 shadow-lg shadow-indigo-500/25">
+          <button 
+            onClick={() => setShowWizard(true)}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 transition-transform hover:scale-105 shadow-lg shadow-indigo-500/25"
+          >
             <Zap size={18} /> 启动生成向导
           </button>
         </div>
